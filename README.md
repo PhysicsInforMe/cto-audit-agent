@@ -284,13 +284,13 @@ Lo strumento e stato validato su **29 repository** (20 reali + 9 sintetiche):
 
 Top 5 per punteggio:
 
-| Repository | Stack | Punteggio |
+| Tipo Progetto | Stack | Punteggio |
 |---|---|---|
-| ripgrep | Rust | 94/100 |
-| clean-architecture | C#/.NET | 89/100 |
-| jekyll | Ruby | 87/100 |
-| fiber | Go | 84/100 |
-| laravel | PHP | 83/100 |
+| CLI Tool | Rust | 94/100 |
+| Architecture Template | C#/.NET | 89/100 |
+| Static Site Generator | Ruby | 87/100 |
+| Web Framework | Go | 84/100 |
+| Web Framework | PHP | 83/100 |
 
 Report completo: [benchmarks/results/benchmark_report.md](benchmarks/results/benchmark_report.md)
 
@@ -298,3 +298,7 @@ Report completo: [benchmarks/results/benchmark_report.md](benchmarks/results/ben
 
 - **Recall**: 100% — tutti i problemi attesi vengono rilevati
 - **Precision**: 100% — nessun falso positivo
+
+### Validazione vs Claude Code
+
+Lo strumento e stato inoltre validato confrontando i risultati con quelli prodotti da **Claude Code** (Anthropic), usato come ground truth indipendente. Il framework di confronto misura score distance, precision, recall e finding agreement tra tool e CC. Dettagli sulla metodologia e istruzioni per replicare: [benchmarks/cc_validation/](benchmarks/cc_validation/).
