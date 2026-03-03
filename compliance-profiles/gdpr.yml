@@ -1,0 +1,91 @@
+# Profilo Compliance GDPR — Regolamento (UE) 2016/679
+#
+# Focus su protezione dati personali e privacy by design.
+# Mapping articoli chiave ai rule_id degli analyzer.
+# Per ogni controllo: se nessuno dei required_rules scatta -> SATISFIED.
+
+name: GDPR
+description: "GDPR (UE) 2016/679 — Protezione dei dati personali"
+version: "1.0"
+
+controls:
+  - control_id: "GDPR-ART25"
+    title: "Protezione dati fin dalla progettazione"
+    article_ref: "Art. 25"
+    description: >
+      Protezione dei dati fin dalla progettazione e per impostazione
+      predefinita (privacy by design e by default).
+    required_rules:
+      - "SEC-HTTPS-001"
+      - "SEC-CRYPTO-001"
+    contributing_rules:
+      - "SEC-HEADERS-001"
+
+  - control_id: "GDPR-ART32-A"
+    title: "Cifratura dei dati personali"
+    article_ref: "Art. 32(1)(a)"
+    description: >
+      Pseudonimizzazione e cifratura dei dati personali.
+    required_rules:
+      - "SEC-CRYPTO-001"
+      - "SEC-HTTPS-001"
+
+  - control_id: "GDPR-ART32-B"
+    title: "Riservatezza e integrita dei sistemi"
+    article_ref: "Art. 32(1)(b)"
+    description: >
+      Capacita di assicurare la riservatezza, l'integrita, la disponibilita
+      e la resilienza dei sistemi e dei servizi di trattamento.
+    required_rules:
+      - "SEC-AUTH-001"
+      - "SEC-CORS-001"
+    contributing_rules:
+      - "INFRA-CONFIG-001"
+      - "INFRA-CONFIG-002"
+
+  - control_id: "GDPR-ART32-C"
+    title: "Ripristino disponibilita dati"
+    article_ref: "Art. 32(1)(c)"
+    description: >
+      Capacita di ripristinare tempestivamente la disponibilita
+      e l'accesso dei dati personali in caso di incidente.
+    required_rules:
+      - "INFRA-DOCKER-001"
+    contributing_rules:
+      - "INFRA-IAC-001"
+
+  - control_id: "GDPR-ART32-D"
+    title: "Verifica e valutazione delle misure"
+    article_ref: "Art. 32(1)(d)"
+    description: >
+      Procedura per testare, verificare e valutare regolarmente
+      l'efficacia delle misure tecniche e organizzative.
+    required_rules:
+      - "ARCH-TEST-001"
+      - "INFRA-CICD-001"
+    contributing_rules:
+      - "INFRA-MON-001"
+
+  - control_id: "GDPR-ART5-F"
+    title: "Integrita e riservatezza"
+    article_ref: "Art. 5(1)(f)"
+    description: >
+      I dati personali devono essere trattati in modo da garantire
+      un'adeguata sicurezza, compresa la protezione da trattamenti
+      non autorizzati o illeciti e dalla perdita accidentale.
+    required_rules:
+      - "SEC-SECRETS-CODE-001"
+      - "SEC-SQL-001"
+    contributing_rules:
+      - "SEC-DEPS-001"
+
+  - control_id: "GDPR-ART33"
+    title: "Notifica violazione dei dati"
+    article_ref: "Art. 33"
+    description: >
+      Notifica di una violazione dei dati personali all'autorita
+      di controllo. Richiede monitoraggio e logging.
+    required_rules:
+      - "INFRA-MON-001"
+    contributing_rules:
+      - "INFRA-CICD-001"

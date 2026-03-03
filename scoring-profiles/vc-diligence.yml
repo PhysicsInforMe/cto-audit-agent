@@ -1,0 +1,327 @@
+# Profilo VC Due Diligence — CTO Audit Agent
+#
+# Profilo alternativo per due diligence pre-investimento.
+# Enfatizza il rischio security e compliance (costi nascosti post-investimento).
+#
+# Fonti: IBM/Ponemon 2025, GDPR Art.83, NIS2 Art.34, CISQ 2022
+#
+# Differenze rispetto al profilo default:
+# - Security pesa 0.35 (vs 0.30): un breach pre-investimento è deal-breaker
+# - Infra pesa 0.20 (vs 0.25): recuperabile post-investimento
+# - Penalità SEC-* aumentate del 20-30%: rischio compliance per l'investitore
+
+name: vc-diligence
+description: "Profilo VC Due Diligence — focus su rischio security e compliance pre-investimento"
+
+# Pesi relativi per layer (devono sommare a 1.0)
+#
+# Security 0.35: VC vuole sapere il rischio breach/compliance.
+#   Un breach pre-investimento può far saltare il deal.
+#   Sanzioni GDPR fino a 4% fatturato, NIS2 fino a €10M.
+#
+# Architecture 0.25: tech debt = costo nascosto post-investimento.
+#   CISQ 2022: $1.52T in tech debt accumulato.
+#
+# Quality 0.20: velocità iterazione del team.
+#   Stripe 2018: 42% tempo dev su tech debt.
+#
+# Infrastructure 0.20: recuperabile post-investimento.
+#   DORA 2024: CI/CD e container si possono aggiungere in settimane.
+layer_weights:
+  security: 0.35
+  architecture: 0.25
+  quality: 0.20
+  infra: 0.20
+
+# Peso default per regole non presenti nel profilo
+default_rule_weight: 0.5
+
+# Regole per layer
+rules:
+  # ============================================================
+  # INFRA — Layer 1 (peso layer: 0.20)
+  # ============================================================
+
+  INFRA-CICD-001:
+    severity: high
+    weight: 0.9
+    penalty: -20
+    framework_ref: "NIST PR.DS-6"
+    description: "Nessun CI/CD pipeline rilevato"
+
+  INFRA-CICD-INFO:
+    severity: info
+    weight: 0.0
+    penalty: 0
+    description: "CI/CD rilevato (informativo)"
+
+  INFRA-DOCKER-001:
+    severity: medium
+    weight: 0.5
+    penalty: -8
+    description: "Nessuna containerizzazione rilevata"
+
+  INFRA-DOCKER-INFO:
+    severity: info
+    weight: 0.0
+    penalty: 0
+    description: "Nessuna containerizzazione (non richiesta per questo tipo di progetto)"
+
+  INFRA-DOCKER-002:
+    severity: low
+    weight: 0.3
+    penalty: -3
+    description: ".dockerignore non presente"
+
+  INFRA-DOCKER-003:
+    severity: medium
+    weight: 0.5
+    penalty: -5
+    description: "Dockerfile senza multi-stage build"
+
+  INFRA-DOCKER-004:
+    severity: medium
+    weight: 0.6
+    penalty: -8
+    description: "Dockerfile esegue come root"
+
+  INFRA-DOCKER-005:
+    severity: low
+    weight: 0.3
+    penalty: -3
+    description: "Dockerfile senza HEALTHCHECK"
+
+  INFRA-IAC-001:
+    severity: high
+    weight: 0.7
+    penalty: -10
+    description: "Nessun Infrastructure as Code rilevato"
+
+  INFRA-DEPS-001:
+    severity: high
+    weight: 0.8
+    penalty: -12
+    framework_ref: "NIS2 Art.21(2)(d)"
+    description: "Nessun lockfile presente"
+
+  INFRA-CONFIG-001:
+    severity: high
+    weight: 0.8
+    penalty: -15
+    description: "File .env con dati sensibili nel repository"
+
+  INFRA-CONFIG-002:
+    severity: high
+    weight: 0.8
+    penalty: -15
+    description: "Secrets rilevati in file di configurazione"
+
+  INFRA-MON-001:
+    severity: medium
+    weight: 0.5
+    penalty: -8
+    framework_ref: "NIS2 Art.21(2)(c)"
+    description: "Nessun monitoraggio rilevato"
+
+  INFRA-ENVEXAMPLE-001:
+    severity: medium
+    weight: 0.4
+    penalty: -5
+    description: ".env.example mancante"
+
+  # ============================================================
+  # ARCHITECTURE — Layer 2 (peso layer: 0.25)
+  # ============================================================
+
+  ARCH-STRUCT-001:
+    severity: medium
+    weight: 0.5
+    penalty: -8
+    description: "Struttura directory flat/caotica"
+
+  ARCH-STRUCT-INFO:
+    severity: info
+    weight: 0.0
+    penalty: 0
+    description: "Pattern architetturale rilevato (informativo)"
+
+  ARCH-COUPLING-001:
+    severity: high
+    weight: 0.8
+    penalty: -15
+    description: "Import circolari rilevati"
+
+  ARCH-COUPLING-002:
+    severity: medium
+    weight: 0.5
+    penalty: -5
+    description: "Fan-out eccessivo"
+
+  ARCH-COUPLING-INFO:
+    severity: info
+    weight: 0.0
+    penalty: 0
+    description: "Fan-out elevato (informativo, oltre il cap normalizzato)"
+
+  ARCH-SCALE-001:
+    severity: medium
+    weight: 0.4
+    penalty: -3
+    description: "File molto grande (>500 LOC)"
+
+  ARCH-SCALE-INFO:
+    severity: info
+    weight: 0.0
+    penalty: 0
+    description: "File grande (informativo, oltre il cap normalizzato)"
+
+  ARCH-TEST-001:
+    severity: critical
+    weight: 1.0
+    penalty: -22
+    description: "Nessuna directory o file di test rilevati"
+
+  ARCH-DB-001:
+    severity: medium
+    weight: 0.5
+    penalty: -8
+    description: "ORM rilevato ma nessuna gestione migrazioni"
+
+  # ============================================================
+  # SECURITY — Layer 3 (peso layer: 0.35)
+  # Penalità aumentate del 20-30% rispetto al default
+  # ============================================================
+
+  # +20%: supply chain è rischio nascosto per investitore
+  SEC-DEPS-001:
+    severity: high
+    weight: 0.9
+    penalty: -15
+    framework_ref: "NIS2 Art.21(2)(d)"
+    description: "Dipendenze con versioni notoriamente vulnerabili (check statico)"
+
+  # +25%: CVE note sono red flag in due diligence
+  SEC-DEPS-CVE-001:
+    severity: high
+    weight: 0.9
+    penalty: -18
+    framework_ref: "NIS2 Art.21(2)(d)"
+    description: "CVE note trovate nelle dipendenze (fonte: Google OSV)"
+
+  # +20%: API senza auth = accesso non autorizzato ai dati
+  SEC-AUTH-001:
+    severity: high
+    weight: 0.9
+    penalty: -18
+    framework_ref: "NIST PR.AC-1"
+    description: "Nessun framework di autenticazione rilevato"
+
+  SEC-HTTPS-001:
+    severity: medium
+    weight: 0.5
+    penalty: -5
+    framework_ref: "NIST PR.DS-2"
+    description: "URL HTTP non cifrati nel codice"
+
+  SEC-CORS-001:
+    severity: medium
+    weight: 0.5
+    penalty: -5
+    framework_ref: "OWASP A01:2021"
+    description: "CORS permissivo (* origins)"
+
+  # +22%: SQL injection = data breach immediato
+  SEC-SQL-001:
+    severity: critical
+    weight: 1.0
+    penalty: -22
+    framework_ref: "OWASP A03:2021"
+    description: "Possibile SQL Injection via string concat"
+
+  # +20%: secrets esposti = deal-breaker in due diligence
+  SEC-SECRETS-CODE-001:
+    severity: critical
+    weight: 1.0
+    penalty: -30
+    framework_ref: "NIST PR.DS-5"
+    description: "Secrets hardcodati nel codice sorgente"
+
+  SEC-HEADERS-001:
+    severity: low
+    weight: 0.3
+    penalty: -3
+    framework_ref: "OWASP A05:2021"
+    description: "Nessun middleware per security headers"
+
+  # +25%: weak crypto = non compliance NIS2/GDPR
+  SEC-CRYPTO-001:
+    severity: medium
+    weight: 0.7
+    penalty: -10
+    framework_ref: "NIST PR.DS-5"
+    description: "Pattern crittografici deboli (MD5, SHA1, DES, RC4)"
+
+  # ============================================================
+  # QUALITY — Layer 4 (peso layer: 0.20)
+  # ============================================================
+
+  QUAL-DOC-001:
+    severity: medium
+    weight: 0.5
+    penalty: -8
+    description: "Nessun README nella root del progetto"
+
+  QUAL-DOC-002:
+    severity: low
+    weight: 0.3
+    penalty: -3
+    description: "Documentazione inline insufficiente"
+
+  QUAL-LINT-001:
+    severity: medium
+    weight: 0.5
+    penalty: -8
+    framework_ref: "NIS2 Art.21(2)(a)"
+    description: "Nessun linter o formatter configurato"
+
+  QUAL-TYPING-001:
+    severity: low
+    weight: 0.3
+    penalty: -3
+    description: "Nessun type checking configurato"
+
+  QUAL-COMPLEXITY-001:
+    severity: medium
+    weight: 0.5
+    penalty: -7
+    description: "Codice eccessivamente annidato"
+
+  QUAL-DUP-001:
+    severity: low
+    weight: 0.3
+    penalty: -3
+    description: "File con nome identico in directory diverse (copy-paste)"
+
+  QUAL-PRECOMMIT-001:
+    severity: medium
+    weight: 0.4
+    penalty: -5
+    description: "Nessun pre-commit hook configurato"
+
+  QUAL-EDITORCONFIG-001:
+    severity: low
+    weight: 0.2
+    penalty: -2
+    description: "Nessun .editorconfig presente"
+
+  QUAL-CONTRIBUTING-001:
+    severity: low
+    weight: 0.2
+    penalty: -2
+    description: "Nessun CONTRIBUTING.md presente"
+
+  QUAL-CHANGELOG-001:
+    severity: low
+    weight: 0.2
+    penalty: -2
+    description: "Nessun CHANGELOG presente"

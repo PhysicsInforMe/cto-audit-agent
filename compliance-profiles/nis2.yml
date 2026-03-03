@@ -1,0 +1,121 @@
+# Profilo Compliance NIS2 — Direttiva (UE) 2022/2555
+#
+# Mapping Art. 21(2) lettere a-j ai rule_id degli analyzer.
+# Per ogni controllo: se nessuno dei required_rules scatta -> SATISFIED.
+
+name: NIS2
+description: "Direttiva NIS2 (UE) 2022/2555 — Misure di gestione del rischio cybersecurity Art. 21(2)"
+version: "1.0"
+
+controls:
+  - control_id: "NIS2-ART21-2A"
+    title: "Analisi dei rischi e politiche di sicurezza"
+    article_ref: "Art. 21(2)(a)"
+    description: >
+      Politiche di analisi dei rischi e di sicurezza dei sistemi informatici.
+      Richiede processi strutturati di analisi e mitigazione dei rischi.
+    required_rules:
+      - "QUAL-LINT-001"
+      - "SEC-AUTH-001"
+    contributing_rules:
+      - "ARCH-STRUCT-001"
+
+  - control_id: "NIS2-ART21-2B"
+    title: "Gestione degli incidenti"
+    article_ref: "Art. 21(2)(b)"
+    description: >
+      Gestione degli incidenti di sicurezza. Richiede monitoraggio,
+      logging, CI/CD per deploy rapidi di fix.
+    required_rules:
+      - "INFRA-MON-001"
+    contributing_rules:
+      - "INFRA-CICD-001"
+
+  - control_id: "NIS2-ART21-2C"
+    title: "Continuita operativa"
+    article_ref: "Art. 21(2)(c)"
+    description: >
+      Continuita operativa, gestione backup, ripristino in caso di disastro,
+      gestione delle crisi.
+    required_rules:
+      - "INFRA-DOCKER-001"
+    contributing_rules:
+      - "INFRA-IAC-001"
+
+  - control_id: "NIS2-ART21-2D"
+    title: "Sicurezza della catena di approvvigionamento"
+    article_ref: "Art. 21(2)(d)"
+    description: >
+      Sicurezza della catena di approvvigionamento, compresi gli aspetti
+      relativi alla sicurezza riguardanti i rapporti tra ciascun soggetto
+      e i suoi diretti fornitori o prestatori di servizi.
+    required_rules:
+      - "INFRA-DEPS-001"
+      - "SEC-DEPS-001"
+
+  - control_id: "NIS2-ART21-2E"
+    title: "Sicurezza acquisizione, sviluppo e manutenzione"
+    article_ref: "Art. 21(2)(e)"
+    description: >
+      Sicurezza dell'acquisizione, dello sviluppo e della manutenzione
+      dei sistemi informatici e di rete, compresa la gestione e la
+      divulgazione delle vulnerabilita.
+    required_rules:
+      - "ARCH-TEST-001"
+      - "SEC-SQL-001"
+    contributing_rules:
+      - "SEC-SECRETS-CODE-001"
+
+  - control_id: "NIS2-ART21-2F"
+    title: "Igiene informatica e formazione"
+    article_ref: "Art. 21(2)(f)"
+    description: >
+      Strategie e procedure per valutare l'efficacia delle misure di
+      gestione dei rischi di cybersecurity. Pratiche di base di igiene
+      informatica e formazione.
+    required_rules:
+      - "QUAL-DOC-001"
+    contributing_rules:
+      - "QUAL-DOC-002"
+
+  - control_id: "NIS2-ART21-2G"
+    title: "Crittografia"
+    article_ref: "Art. 21(2)(g)"
+    description: >
+      Politiche e procedure relative all'uso della crittografia e,
+      se del caso, della cifratura.
+    required_rules:
+      - "SEC-CRYPTO-001"
+      - "SEC-HTTPS-001"
+
+  - control_id: "NIS2-ART21-2H"
+    title: "Controllo degli accessi"
+    article_ref: "Art. 21(2)(h)"
+    description: >
+      Politiche di controllo dell'accesso, sicurezza delle risorse umane,
+      gestione degli asset.
+    required_rules:
+      - "SEC-AUTH-001"
+    contributing_rules:
+      - "SEC-CORS-001"
+
+  - control_id: "NIS2-ART21-2I"
+    title: "Comunicazioni sicure"
+    article_ref: "Art. 21(2)(i)"
+    description: >
+      Uso di soluzioni di comunicazione vocale, video e di testo protette
+      e di sistemi di comunicazione di emergenza protetti.
+    required_rules:
+      - "SEC-HTTPS-001"
+    contributing_rules:
+      - "SEC-HEADERS-001"
+
+  - control_id: "NIS2-ART21-2J"
+    title: "Gestione delle vulnerabilita"
+    article_ref: "Art. 21(2)(j)"
+    description: >
+      Gestione e divulgazione delle vulnerabilita.
+    required_rules:
+      - "SEC-DEPS-001"
+    contributing_rules:
+      - "INFRA-DEPS-001"

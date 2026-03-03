@@ -1,0 +1,539 @@
+{
+  "timestamp": "2026-02-26 12:18:15",
+  "repos": {
+    "python-web-insecure": {
+      "language": "python",
+      "description": "Python FastAPI app con SQL injection, secrets esposti, CORS aperto",
+      "expected_rules": [
+        "INFRA-CONFIG-001",
+        "INFRA-DOCKER-003",
+        "INFRA-DOCKER-004",
+        "INFRA-DOCKER-005",
+        "INFRA-IAC-001",
+        "INFRA-MON-001",
+        "SEC-CORS-001",
+        "SEC-HTTPS-001",
+        "SEC-SECRETS-CODE-001",
+        "SEC-SQL-001"
+      ],
+      "expected_absent": [
+        "ARCH-TEST-001",
+        "INFRA-CICD-001",
+        "INFRA-DEPS-001",
+        "QUAL-DOC-001"
+      ],
+      "evaluation": {
+        "true_positives": [
+          "INFRA-CONFIG-001",
+          "INFRA-DOCKER-003",
+          "INFRA-DOCKER-004",
+          "INFRA-DOCKER-005",
+          "INFRA-IAC-001",
+          "INFRA-MON-001",
+          "SEC-CORS-001",
+          "SEC-HTTPS-001",
+          "SEC-SECRETS-CODE-001",
+          "SEC-SQL-001"
+        ],
+        "false_negatives": [],
+        "false_positives_strict": [],
+        "all_triggered": [
+          "ARCH-DB-001",
+          "ARCH-STRUCT-001",
+          "INFRA-CICD-INFO",
+          "INFRA-CONFIG-001",
+          "INFRA-CONFIG-002",
+          "INFRA-DOCKER-002",
+          "INFRA-DOCKER-003",
+          "INFRA-DOCKER-004",
+          "INFRA-DOCKER-005",
+          "INFRA-IAC-001",
+          "INFRA-MON-001",
+          "QUAL-DOC-002",
+          "QUAL-LINT-001",
+          "QUAL-TYPING-001",
+          "SEC-AUTH-001",
+          "SEC-CORS-001",
+          "SEC-HEADERS-001",
+          "SEC-HTTPS-001",
+          "SEC-SECRETS-CODE-001",
+          "SEC-SQL-001"
+        ],
+        "recall": 100.0,
+        "precision": 100.0
+      }
+    },
+    "go-microservice-clean": {
+      "language": "go",
+      "description": "Go microservice pulito con CI/CD, Docker multi-stage, test, lockfile",
+      "expected_rules": [
+        "INFRA-IAC-001"
+      ],
+      "expected_absent": [
+        "ARCH-TEST-001",
+        "INFRA-CICD-001",
+        "INFRA-DEPS-001",
+        "INFRA-DOCKER-001",
+        "INFRA-DOCKER-003",
+        "INFRA-DOCKER-004",
+        "INFRA-DOCKER-005",
+        "QUAL-DOC-001",
+        "SEC-SQL-001"
+      ],
+      "evaluation": {
+        "true_positives": [
+          "INFRA-IAC-001"
+        ],
+        "false_negatives": [],
+        "false_positives_strict": [],
+        "all_triggered": [
+          "INFRA-CICD-INFO",
+          "INFRA-IAC-001",
+          "QUAL-LINT-001",
+          "SEC-AUTH-001"
+        ],
+        "recall": 100.0,
+        "precision": 100.0
+      }
+    },
+    "js-spa-messy": {
+      "language": "javascript",
+      "description": "JavaScript SPA caotica: no CI/CD, no Docker, no test, SQL injection, secrets",
+      "expected_rules": [
+        "ARCH-STRUCT-001",
+        "ARCH-TEST-001",
+        "INFRA-CICD-001",
+        "INFRA-CONFIG-001",
+        "INFRA-DEPS-001",
+        "INFRA-DOCKER-001",
+        "INFRA-IAC-001",
+        "INFRA-MON-001",
+        "QUAL-COMPLEXITY-001",
+        "QUAL-DUP-001",
+        "SEC-CORS-001",
+        "SEC-HTTPS-001",
+        "SEC-SECRETS-CODE-001",
+        "SEC-SQL-001"
+      ],
+      "expected_absent": [],
+      "evaluation": {
+        "true_positives": [
+          "ARCH-STRUCT-001",
+          "ARCH-TEST-001",
+          "INFRA-CICD-001",
+          "INFRA-CONFIG-001",
+          "INFRA-DEPS-001",
+          "INFRA-DOCKER-001",
+          "INFRA-IAC-001",
+          "INFRA-MON-001",
+          "QUAL-COMPLEXITY-001",
+          "QUAL-DUP-001",
+          "SEC-CORS-001",
+          "SEC-HTTPS-001",
+          "SEC-SECRETS-CODE-001",
+          "SEC-SQL-001"
+        ],
+        "false_negatives": [],
+        "false_positives_strict": [],
+        "all_triggered": [
+          "ARCH-STRUCT-001",
+          "ARCH-TEST-001",
+          "INFRA-CICD-001",
+          "INFRA-CONFIG-001",
+          "INFRA-CONFIG-002",
+          "INFRA-DEPS-001",
+          "INFRA-DOCKER-001",
+          "INFRA-IAC-001",
+          "INFRA-MON-001",
+          "QUAL-COMPLEXITY-001",
+          "QUAL-DUP-001",
+          "QUAL-LINT-001",
+          "QUAL-TYPING-001",
+          "SEC-CORS-001",
+          "SEC-HEADERS-001",
+          "SEC-HTTPS-001",
+          "SEC-SECRETS-CODE-001",
+          "SEC-SQL-001"
+        ],
+        "recall": 100.0,
+        "precision": 100.0
+      }
+    },
+    "java-spring-enterprise": {
+      "language": "java",
+      "description": "Java Spring Boot enterprise: CI/CD, Docker, test, auth, migrations, monitoring",
+      "expected_rules": [
+        "INFRA-IAC-001"
+      ],
+      "expected_absent": [
+        "ARCH-DB-001",
+        "ARCH-TEST-001",
+        "INFRA-CICD-001",
+        "INFRA-DEPS-001",
+        "INFRA-DOCKER-001",
+        "INFRA-DOCKER-003",
+        "INFRA-DOCKER-004",
+        "INFRA-DOCKER-005",
+        "INFRA-MON-001",
+        "QUAL-DOC-001",
+        "SEC-AUTH-001"
+      ],
+      "evaluation": {
+        "true_positives": [
+          "INFRA-IAC-001"
+        ],
+        "false_negatives": [],
+        "false_positives_strict": [],
+        "all_triggered": [
+          "INFRA-CICD-INFO",
+          "INFRA-IAC-001",
+          "QUAL-LINT-001"
+        ],
+        "recall": 100.0,
+        "precision": 100.0
+      }
+    },
+    "rust-cli-minimal": {
+      "language": "rust",
+      "description": "Rust CLI minimale: no CI/CD, no Docker (OK per CLI), ha test e lockfile",
+      "expected_rules": [
+        "INFRA-CICD-001",
+        "INFRA-IAC-001",
+        "INFRA-MON-001"
+      ],
+      "expected_absent": [
+        "ARCH-TEST-001",
+        "INFRA-DEPS-001",
+        "QUAL-DOC-001",
+        "SEC-SQL-001"
+      ],
+      "evaluation": {
+        "true_positives": [
+          "INFRA-CICD-001",
+          "INFRA-IAC-001",
+          "INFRA-MON-001"
+        ],
+        "false_negatives": [],
+        "false_positives_strict": [],
+        "all_triggered": [
+          "INFRA-CICD-001",
+          "INFRA-DOCKER-INFO",
+          "INFRA-IAC-001",
+          "INFRA-MON-001",
+          "QUAL-LINT-001"
+        ],
+        "recall": 100.0,
+        "precision": 100.0
+      }
+    },
+    "php-laravel-vulnerable": {
+      "language": "php",
+      "description": "PHP Laravel con SQL injection, secrets hardcodati, MD5, CORS aperto",
+      "expected_rules": [
+        "INFRA-CICD-001",
+        "INFRA-CONFIG-001",
+        "INFRA-DOCKER-003",
+        "INFRA-DOCKER-004",
+        "INFRA-DOCKER-005",
+        "INFRA-IAC-001",
+        "INFRA-MON-001",
+        "SEC-CORS-001",
+        "SEC-CRYPTO-001",
+        "SEC-HTTPS-001",
+        "SEC-SECRETS-CODE-001",
+        "SEC-SQL-001"
+      ],
+      "expected_absent": [
+        "ARCH-TEST-001",
+        "INFRA-DEPS-001",
+        "QUAL-DOC-001"
+      ],
+      "evaluation": {
+        "true_positives": [
+          "INFRA-CICD-001",
+          "INFRA-CONFIG-001",
+          "INFRA-DOCKER-003",
+          "INFRA-DOCKER-004",
+          "INFRA-DOCKER-005",
+          "INFRA-IAC-001",
+          "INFRA-MON-001",
+          "SEC-CORS-001",
+          "SEC-CRYPTO-001",
+          "SEC-HTTPS-001",
+          "SEC-SECRETS-CODE-001",
+          "SEC-SQL-001"
+        ],
+        "false_negatives": [],
+        "false_positives_strict": [],
+        "all_triggered": [
+          "INFRA-CICD-001",
+          "INFRA-CONFIG-001",
+          "INFRA-DOCKER-002",
+          "INFRA-DOCKER-003",
+          "INFRA-DOCKER-004",
+          "INFRA-DOCKER-005",
+          "INFRA-IAC-001",
+          "INFRA-MON-001",
+          "QUAL-LINT-001",
+          "SEC-AUTH-001",
+          "SEC-CORS-001",
+          "SEC-CRYPTO-001",
+          "SEC-HEADERS-001",
+          "SEC-HTTPS-001",
+          "SEC-SECRETS-CODE-001",
+          "SEC-SQL-001"
+        ],
+        "recall": 100.0,
+        "precision": 100.0
+      }
+    },
+    "ruby-rails-mature": {
+      "language": "ruby",
+      "description": "Ruby on Rails matura: CI/CD, Docker, Devise auth, test, migrations",
+      "expected_rules": [
+        "INFRA-IAC-001",
+        "INFRA-MON-001"
+      ],
+      "expected_absent": [
+        "ARCH-DB-001",
+        "ARCH-TEST-001",
+        "INFRA-CICD-001",
+        "INFRA-DEPS-001",
+        "INFRA-DOCKER-001",
+        "INFRA-DOCKER-003",
+        "INFRA-DOCKER-004",
+        "INFRA-DOCKER-005",
+        "QUAL-DOC-001",
+        "SEC-AUTH-001"
+      ],
+      "evaluation": {
+        "true_positives": [
+          "INFRA-IAC-001",
+          "INFRA-MON-001"
+        ],
+        "false_negatives": [],
+        "false_positives_strict": [],
+        "all_triggered": [
+          "ARCH-STRUCT-INFO",
+          "INFRA-CICD-INFO",
+          "INFRA-IAC-001",
+          "INFRA-MON-001",
+          "QUAL-LINT-001",
+          "SEC-HEADERS-001"
+        ],
+        "recall": 100.0,
+        "precision": 100.0
+      }
+    },
+    "csharp-api-no-tests": {
+      "language": "csharp",
+      "description": "C# .NET API senza test, secrets esposti, SHA1, file giganti",
+      "expected_rules": [
+        "ARCH-SCALE-001",
+        "ARCH-TEST-001",
+        "INFRA-CICD-001",
+        "INFRA-CONFIG-001",
+        "INFRA-DOCKER-003",
+        "INFRA-DOCKER-004",
+        "INFRA-DOCKER-005",
+        "INFRA-IAC-001",
+        "INFRA-MON-001",
+        "SEC-CRYPTO-001",
+        "SEC-SECRETS-CODE-001"
+      ],
+      "expected_absent": [
+        "QUAL-DOC-001"
+      ],
+      "evaluation": {
+        "true_positives": [
+          "ARCH-SCALE-001",
+          "ARCH-TEST-001",
+          "INFRA-CICD-001",
+          "INFRA-CONFIG-001",
+          "INFRA-DOCKER-003",
+          "INFRA-DOCKER-004",
+          "INFRA-DOCKER-005",
+          "INFRA-IAC-001",
+          "INFRA-MON-001",
+          "SEC-CRYPTO-001",
+          "SEC-SECRETS-CODE-001"
+        ],
+        "false_negatives": [],
+        "false_positives_strict": [],
+        "all_triggered": [
+          "ARCH-SCALE-001",
+          "ARCH-TEST-001",
+          "INFRA-CICD-001",
+          "INFRA-CONFIG-001",
+          "INFRA-CONFIG-002",
+          "INFRA-DOCKER-002",
+          "INFRA-DOCKER-003",
+          "INFRA-DOCKER-004",
+          "INFRA-DOCKER-005",
+          "INFRA-IAC-001",
+          "INFRA-MON-001",
+          "QUAL-LINT-001",
+          "SEC-CRYPTO-001",
+          "SEC-SECRETS-CODE-001"
+        ],
+        "recall": 100.0,
+        "precision": 100.0
+      }
+    },
+    "python-data-pipeline": {
+      "language": "python",
+      "description": "Python ETL: no CI/CD, no Docker, secrets in code, MD5, nesting",
+      "expected_rules": [
+        "INFRA-CICD-001",
+        "INFRA-IAC-001",
+        "INFRA-MON-001",
+        "QUAL-COMPLEXITY-001",
+        "SEC-CRYPTO-001",
+        "SEC-HTTPS-001",
+        "SEC-SECRETS-CODE-001"
+      ],
+      "expected_absent": [
+        "ARCH-TEST-001",
+        "INFRA-DEPS-001",
+        "QUAL-DOC-001"
+      ],
+      "evaluation": {
+        "true_positives": [
+          "INFRA-CICD-001",
+          "INFRA-IAC-001",
+          "INFRA-MON-001",
+          "QUAL-COMPLEXITY-001",
+          "SEC-CRYPTO-001",
+          "SEC-HTTPS-001",
+          "SEC-SECRETS-CODE-001"
+        ],
+        "false_negatives": [],
+        "false_positives_strict": [],
+        "all_triggered": [
+          "ARCH-DB-001",
+          "ARCH-STRUCT-001",
+          "INFRA-CICD-001",
+          "INFRA-DOCKER-INFO",
+          "INFRA-IAC-001",
+          "INFRA-MON-001",
+          "QUAL-COMPLEXITY-001",
+          "QUAL-LINT-001",
+          "QUAL-TYPING-001",
+          "SEC-AUTH-001",
+          "SEC-CRYPTO-001",
+          "SEC-HEADERS-001",
+          "SEC-HTTPS-001",
+          "SEC-SECRETS-CODE-001"
+        ],
+        "recall": 100.0,
+        "precision": 100.0
+      }
+    }
+  },
+  "aggregate": {
+    "total_repos": 9,
+    "total_checks": 61,
+    "true_positives": 61,
+    "false_negatives": 0,
+    "false_positives_strict": 0,
+    "overall_recall": 100.0,
+    "overall_precision": 100.0,
+    "per_rule": {
+      "ARCH-SCALE-001": {
+        "tp": 1,
+        "fn": 0,
+        "rate": 100.0
+      },
+      "ARCH-STRUCT-001": {
+        "tp": 1,
+        "fn": 0,
+        "rate": 100.0
+      },
+      "ARCH-TEST-001": {
+        "tp": 2,
+        "fn": 0,
+        "rate": 100.0
+      },
+      "INFRA-CICD-001": {
+        "tp": 5,
+        "fn": 0,
+        "rate": 100.0
+      },
+      "INFRA-CONFIG-001": {
+        "tp": 4,
+        "fn": 0,
+        "rate": 100.0
+      },
+      "INFRA-DEPS-001": {
+        "tp": 1,
+        "fn": 0,
+        "rate": 100.0
+      },
+      "INFRA-DOCKER-001": {
+        "tp": 1,
+        "fn": 0,
+        "rate": 100.0
+      },
+      "INFRA-DOCKER-003": {
+        "tp": 3,
+        "fn": 0,
+        "rate": 100.0
+      },
+      "INFRA-DOCKER-004": {
+        "tp": 3,
+        "fn": 0,
+        "rate": 100.0
+      },
+      "INFRA-DOCKER-005": {
+        "tp": 3,
+        "fn": 0,
+        "rate": 100.0
+      },
+      "INFRA-IAC-001": {
+        "tp": 9,
+        "fn": 0,
+        "rate": 100.0
+      },
+      "INFRA-MON-001": {
+        "tp": 7,
+        "fn": 0,
+        "rate": 100.0
+      },
+      "QUAL-COMPLEXITY-001": {
+        "tp": 2,
+        "fn": 0,
+        "rate": 100.0
+      },
+      "QUAL-DUP-001": {
+        "tp": 1,
+        "fn": 0,
+        "rate": 100.0
+      },
+      "SEC-CORS-001": {
+        "tp": 3,
+        "fn": 0,
+        "rate": 100.0
+      },
+      "SEC-CRYPTO-001": {
+        "tp": 3,
+        "fn": 0,
+        "rate": 100.0
+      },
+      "SEC-HTTPS-001": {
+        "tp": 4,
+        "fn": 0,
+        "rate": 100.0
+      },
+      "SEC-SECRETS-CODE-001": {
+        "tp": 5,
+        "fn": 0,
+        "rate": 100.0
+      },
+      "SEC-SQL-001": {
+        "tp": 3,
+        "fn": 0,
+        "rate": 100.0
+      }
+    }
+  }
+}

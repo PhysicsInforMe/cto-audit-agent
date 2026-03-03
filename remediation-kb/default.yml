@@ -1,0 +1,841 @@
+# Remediation Knowledge Base — default
+#
+# 1 entry per ogni regola penalizzante nel scoring profile default.
+# Usato dal Board Report per generare piani d'azione con effort, impatto business e step.
+
+# ==============================================================
+# INFRA — Layer 1
+# ==============================================================
+
+INFRA-CICD-001:
+  risk_business: >
+    Senza CI/CD, ogni deploy e manuale e soggetto a errori umani.
+    I tempi di rilascio si allungano, il rischio di regressioni aumenta,
+    e la capacita di reagire a incidenti di sicurezza e compromessa.
+    DORA 2024: CI/CD e il #1 predictor di elite performance, ma si recupera
+    in settimane — severity high, non critical.
+  remediation_steps:
+    - "Configurare un pipeline CI/CD base (build + test + lint)"
+    - "Aggiungere step di deploy automatizzato (staging + production)"
+    - "Configurare notifiche su fallimento pipeline"
+  effort_range:
+    min_hours: 4
+    max_hours: 16
+    t_shirt: "M"
+  priority_tier: 1
+  stack_specific:
+    python:
+      remediation_steps:
+        - "Creare .github/workflows/ci.yml con pytest + ruff"
+        - "Aggiungere step di deploy con ambiente staging"
+    javascript:
+      remediation_steps:
+        - "Creare .github/workflows/ci.yml con npm test + eslint"
+        - "Configurare build step per applicazione frontend/backend"
+    go:
+      remediation_steps:
+        - "Creare .github/workflows/ci.yml con go test + go vet"
+        - "Aggiungere build binario e upload artefatti"
+  references:
+    - "NIST PR.DS-6"
+
+INFRA-DOCKER-001:
+  risk_business: >
+    Senza containerizzazione, il deployment dipende dall'ambiente host.
+    Problemi di 'works on my machine' sono frequenti, il provisioning
+    di nuovi ambienti e lento, e la scalabilita e limitata.
+    DORA 2024: container non e predictor primario di elite performance.
+    VM con Ansible funziona — severity medium, non critical.
+    Nota: questa regola scatta solo per progetti deployabili (web/servizi).
+    Librerie e CLI ricevono INFRA-DOCKER-INFO (informativo, nessuna penalita).
+  remediation_steps:
+    - "Creare un Dockerfile per l'applicazione principale"
+    - "Aggiungere docker-compose.yml per lo sviluppo locale"
+    - "Documentare il processo di build e run con Docker"
+  effort_range:
+    min_hours: 4
+    max_hours: 16
+    t_shirt: "M"
+  priority_tier: 2
+  stack_specific:
+    python:
+      remediation_steps:
+        - "Creare Dockerfile multi-stage con python:3.11-slim"
+        - "Aggiungere docker-compose.yml con servizi (app, db, redis)"
+    javascript:
+      remediation_steps:
+        - "Creare Dockerfile multi-stage con node:20-alpine"
+        - "Aggiungere docker-compose.yml con servizi necessari"
+  references: []
+
+INFRA-DOCKER-002:
+  risk_business: >
+    Senza .dockerignore, file non necessari (node_modules, .git, .env)
+    vengono inclusi nell'immagine Docker, aumentando dimensione e
+    rischio di leak di dati sensibili.
+  remediation_steps:
+    - "Creare file .dockerignore nella root del progetto"
+    - "Escludere node_modules, .git, .env, __pycache__, e artefatti di build"
+  effort_range:
+    min_hours: 1
+    max_hours: 2
+    t_shirt: "XS"
+  priority_tier: 3
+  stack_specific: {}
+  references: []
+
+INFRA-DOCKER-003:
+  risk_business: >
+    Senza multi-stage build, le immagini Docker contengono tool di build
+    e dipendenze non necessarie in produzione, aumentando la superficie
+    di attacco e la dimensione dell'immagine.
+  remediation_steps:
+    - "Ristrutturare il Dockerfile con almeno 2 stage (build + runtime)"
+    - "Copiare solo gli artefatti necessari nello stage finale"
+    - "Usare immagini base slim o alpine per lo stage runtime"
+  effort_range:
+    min_hours: 2
+    max_hours: 8
+    t_shirt: "S"
+  priority_tier: 2
+  stack_specific:
+    python:
+      remediation_steps:
+        - "Stage 1: installare dipendenze con pip wheel"
+        - "Stage 2: copiare wheel installati su python:3.11-slim"
+    javascript:
+      remediation_steps:
+        - "Stage 1: npm ci e npm run build"
+        - "Stage 2: copiare dist/ su node:20-alpine"
+  references: []
+
+INFRA-DOCKER-004:
+  risk_business: >
+    Eseguire container come root espone l'host a privilege escalation.
+    Un attaccante che compromette il container ottiene accesso root,
+    potendo modificare file di sistema e accedere a risorse protette.
+  remediation_steps:
+    - "Aggiungere USER non-root nel Dockerfile"
+    - "Creare un utente dedicato (es. appuser) con permessi minimi"
+    - "Verificare che l'applicazione funzioni con utente non-root"
+  effort_range:
+    min_hours: 1
+    max_hours: 4
+    t_shirt: "S"
+  priority_tier: 2
+  stack_specific: {}
+  references: []
+
+INFRA-DOCKER-005:
+  risk_business: >
+    Senza HEALTHCHECK, l'orchestratore non sa se il container e sano.
+    Container in stato unhealthy continuano a ricevere traffico,
+    causando errori per gli utenti e ritardando il recovery automatico.
+  remediation_steps:
+    - "Aggiungere istruzione HEALTHCHECK nel Dockerfile"
+    - "Implementare endpoint /health nell'applicazione"
+    - "Configurare intervalli e threshold appropriati"
+  effort_range:
+    min_hours: 1
+    max_hours: 4
+    t_shirt: "S"
+  priority_tier: 3
+  stack_specific: {}
+  references: []
+
+INFRA-IAC-001:
+  risk_business: >
+    Senza Infrastructure as Code, l'infrastruttura e configurata manualmente.
+    Non c'e versioning, non c'e ripetibilita, e il disaster recovery
+    richiede ricostruzione manuale dell'intero ambiente.
+  remediation_steps:
+    - "Scegliere un tool IaC appropriato (Terraform, Pulumi, CloudFormation)"
+    - "Codificare l'infrastruttura esistente in file dichiarativi"
+    - "Versionare i file IaC nel repository"
+  effort_range:
+    min_hours: 8
+    max_hours: 40
+    t_shirt: "L"
+  priority_tier: 2
+  stack_specific: {}
+  references: []
+
+INFRA-DEPS-001:
+  risk_business: >
+    Senza lockfile, le versioni delle dipendenze non sono fissate.
+    Build non ripetibili, rischio di breaking change silenti,
+    e vulnerabilita alla supply chain attack via version range.
+  remediation_steps:
+    - "Generare il lockfile appropriato per il package manager in uso"
+    - "Committare il lockfile nel repository"
+    - "Configurare CI per usare install con lockfile (npm ci, pip install --require-hashes)"
+  effort_range:
+    min_hours: 1
+    max_hours: 4
+    t_shirt: "S"
+  priority_tier: 1
+  stack_specific:
+    python:
+      remediation_steps:
+        - "Usare poetry lock o pip freeze > requirements.txt"
+        - "Committare poetry.lock o requirements.txt"
+    javascript:
+      remediation_steps:
+        - "Eseguire npm install per generare package-lock.json"
+        - "Committare package-lock.json nel repository"
+  references:
+    - "NIS2 Art.21(2)(d)"
+
+INFRA-CONFIG-001:
+  risk_business: >
+    File .env con dati sensibili nel repository espongono credenziali
+    a chiunque abbia accesso al codice (anche nella cronologia git).
+    Rischio concreto di data breach e accesso non autorizzato.
+  remediation_steps:
+    - "Rimuovere i file .env dal repository e dalla cronologia git"
+    - "Aggiungere .env a .gitignore"
+    - "Usare un secret manager o variabili d'ambiente del CI/CD"
+    - "Ruotare tutte le credenziali esposte"
+  effort_range:
+    min_hours: 2
+    max_hours: 8
+    t_shirt: "S"
+  priority_tier: 1
+  stack_specific: {}
+  references: []
+
+INFRA-CONFIG-002:
+  risk_business: >
+    Secret hardcodati nei file di configurazione sono visibili
+    a tutti gli sviluppatori e nella cronologia git. Un leak del
+    repository espone immediatamente tutte le credenziali.
+  remediation_steps:
+    - "Estrarre i secret dai file di configurazione"
+    - "Usare variabili d'ambiente o un secret manager"
+    - "Aggiungere check pre-commit per rilevare secret accidentali"
+    - "Ruotare tutte le credenziali esposte"
+  effort_range:
+    min_hours: 2
+    max_hours: 8
+    t_shirt: "S"
+  priority_tier: 1
+  stack_specific: {}
+  references: []
+
+INFRA-MON-001:
+  risk_business: >
+    Senza monitoraggio, i problemi in produzione vengono scoperti
+    solo quando gli utenti li segnalano. Il tempo di risposta agli
+    incidenti aumenta e la root cause analysis e piu difficile.
+  remediation_steps:
+    - "Integrare un sistema di error tracking (Sentry, Bugsnag)"
+    - "Aggiungere metriche applicative base (latenza, errori, throughput)"
+    - "Configurare alerting su metriche critiche"
+  effort_range:
+    min_hours: 4
+    max_hours: 16
+    t_shirt: "M"
+  priority_tier: 2
+  stack_specific:
+    python:
+      remediation_steps:
+        - "Installare sentry-sdk e configurare DSN"
+        - "Aggiungere prometheus-client per metriche custom"
+    javascript:
+      remediation_steps:
+        - "Installare @sentry/node e configurare init"
+        - "Aggiungere prom-client per metriche Prometheus"
+  references:
+    - "NIS2 Art.21(2)(c)"
+
+# ==============================================================
+# ARCHITECTURE — Layer 2
+# ==============================================================
+
+ARCH-STRUCT-001:
+  risk_business: >
+    Una struttura directory flat rende difficile navigare il codice,
+    onboardare nuovi sviluppatori, e capire i confini dei moduli.
+    Il costo di manutenzione cresce esponenzialmente con la dimensione del team.
+  remediation_steps:
+    - "Riorganizzare il codice in moduli/package con responsabilita chiare"
+    - "Adottare un pattern architetturale (layered, feature-based, clean architecture)"
+    - "Documentare la struttura nel README"
+  effort_range:
+    min_hours: 8
+    max_hours: 40
+    t_shirt: "L"
+  priority_tier: 2
+  stack_specific:
+    python:
+      remediation_steps:
+        - "Creare package Python con __init__.py per ogni modulo"
+        - "Separare domain, services, api, infrastructure"
+    javascript:
+      remediation_steps:
+        - "Creare directory per feature o layer (components, services, utils)"
+        - "Usare barrel exports (index.ts) per API pubbliche"
+  references: []
+
+ARCH-COUPLING-001:
+  risk_business: >
+    Import circolari indicano moduli troppo accoppiati.
+    Ogni modifica rischia di generare effetti a catena imprevedibili,
+    rendendo il refactoring costoso e i test difficili da isolare.
+  remediation_steps:
+    - "Identificare e mappare tutti i cicli di dipendenza"
+    - "Estrarre interfacce/protocolli per spezzare i cicli"
+    - "Applicare dependency inversion (dipendere da astrazioni)"
+  effort_range:
+    min_hours: 4
+    max_hours: 24
+    t_shirt: "M"
+  priority_tier: 2
+  stack_specific:
+    python:
+      remediation_steps:
+        - "Usare TYPE_CHECKING per import solo a tempo di type-check"
+        - "Estrarre Protocol/ABC per le interfacce condivise"
+    javascript:
+      remediation_steps:
+        - "Estrarre interfacce TypeScript per spezzare dipendenze"
+        - "Usare dependency injection per invertire le dipendenze"
+  references: []
+
+ARCH-COUPLING-002:
+  risk_business: >
+    Moduli con fan-out eccessivo dipendono da troppi altri moduli.
+    Sono fragili: ogni cambiamento in una dipendenza puo romperli.
+    Indicano mancanza di incapsulamento e confini poco chiari.
+  remediation_steps:
+    - "Ridurre le dipendenze dirette raggruppando funzionalita correlate"
+    - "Introdurre una facade o un service layer per mediare le dipendenze"
+    - "Applicare il principio di responsabilita singola"
+  effort_range:
+    min_hours: 4
+    max_hours: 16
+    t_shirt: "M"
+  priority_tier: 3
+  stack_specific: {}
+  references: []
+
+ARCH-SCALE-001:
+  risk_business: >
+    File molto grandi (>500 LOC) sono difficili da capire, testare
+    e modificare. Il rischio di merge conflict aumenta, e l'onboarding
+    di nuovi sviluppatori rallenta significativamente.
+  remediation_steps:
+    - "Identificare le responsabilita distinte all'interno del file"
+    - "Estrarre classi/funzioni in moduli dedicati"
+    - "Mantenere ogni file sotto le 300-400 LOC"
+  effort_range:
+    min_hours: 2
+    max_hours: 16
+    t_shirt: "M"
+  priority_tier: 3
+  stack_specific: {}
+  references: []
+
+ARCH-TEST-001:
+  risk_business: >
+    Senza test automatizzati, ogni modifica al codice e un rischio.
+    Boehm (1981): un defect in produzione costa 10-100x rispetto a uno
+    trovato in fase di design. DORA 2024: testing e key capability.
+    Severity critical: senza test ogni change e un rischio esistenziale
+    per la stabilita del prodotto.
+  remediation_steps:
+    - "Creare una directory tests/ con struttura che rispecchia il codice sorgente"
+    - "Scrivere test unitari per la logica di business critica"
+    - "Configurare il test runner nel CI/CD pipeline"
+  effort_range:
+    min_hours: 8
+    max_hours: 40
+    t_shirt: "L"
+  priority_tier: 1
+  stack_specific:
+    python:
+      remediation_steps:
+        - "Configurare pytest con conftest.py base"
+        - "Scrivere test per i moduli core con fixture riutilizzabili"
+        - "Aggiungere pytest al CI pipeline"
+    javascript:
+      remediation_steps:
+        - "Configurare Jest o Vitest con setup base"
+        - "Scrivere test per i moduli core"
+        - "Aggiungere npm test al CI pipeline"
+  references: []
+
+ARCH-DB-001:
+  risk_business: >
+    ORM senza gestione migrazioni significa che le modifiche allo schema
+    sono manuali e non tracciate. Rischio di perdita dati in produzione,
+    impossibilita di rollback, e ambienti non allineati.
+  remediation_steps:
+    - "Configurare un tool di migrazione database (Alembic, Flyway, Knex)"
+    - "Creare la migrazione iniziale dallo schema corrente"
+    - "Integrare le migrazioni nel processo di deploy"
+  effort_range:
+    min_hours: 4
+    max_hours: 16
+    t_shirt: "M"
+  priority_tier: 2
+  stack_specific:
+    python:
+      remediation_steps:
+        - "Installare e configurare Alembic per SQLAlchemy"
+        - "Generare migrazione iniziale con alembic revision --autogenerate"
+    javascript:
+      remediation_steps:
+        - "Configurare migrazioni con Knex, TypeORM o Prisma"
+        - "Creare migrazione iniziale dallo schema corrente"
+  references: []
+
+# ==============================================================
+# SECURITY — Layer 3
+# ==============================================================
+
+SEC-DEPS-001:
+  risk_business: >
+    Dipendenze con vulnerabilita note sono il vettore di attacco piu comune.
+    Un attaccante puo sfruttare CVE pubbliche per compromettere il sistema
+    senza bisogno di trovare nuove vulnerabilita.
+  remediation_steps:
+    - "Aggiornare immediatamente le dipendenze vulnerabili alle versioni patchate"
+    - "Configurare Dependabot o Renovate per aggiornamenti automatici"
+    - "Integrare audit dipendenze nel CI/CD (npm audit, pip-audit, safety)"
+  effort_range:
+    min_hours: 2
+    max_hours: 8
+    t_shirt: "S"
+  priority_tier: 1
+  stack_specific:
+    python:
+      remediation_steps:
+        - "Eseguire pip-audit o safety check per trovare CVE"
+        - "Aggiornare con pip install --upgrade <package>"
+        - "Configurare .github/dependabot.yml per Python"
+    javascript:
+      remediation_steps:
+        - "Eseguire npm audit fix per risolvere vulnerabilita note"
+        - "Configurare Dependabot o Renovate per aggiornamenti automatici"
+  references:
+    - "NIS2 Art.21(2)(d)"
+
+SEC-DEPS-CVE-001:
+  risk_business: >
+    Le dipendenze con CVE note rappresentano il vettore di attacco piu sfruttato
+    (15% dei breach secondo Verizon DBIR 2024). Exploit pubblici sono disponibili
+    per queste vulnerabilita, rendendo l'attacco triviale. Il database OSV di Google
+    fornisce informazioni aggiornate in tempo reale.
+  remediation_steps:
+    - "Aggiornare le dipendenze alle versioni patchate indicate nel report"
+    - "Configurare Dependabot, Renovate o Snyk per monitoraggio continuo"
+    - "Integrare audit dipendenze nel CI/CD pipeline"
+    - "Verificare periodicamente con: cto-audit scan --focus security"
+  effort_range:
+    min_hours: 2
+    max_hours: 16
+    t_shirt: "M"
+  priority_tier: 1
+  references:
+    - "NIS2 Art.21(2)(d)"
+    - "Google OSV: https://osv.dev"
+
+SEC-AUTH-001:
+  risk_business: >
+    API esposte senza autenticazione permettono accesso non autorizzato
+    a dati e funzionalita. Qualsiasi utente o bot puo invocare gli endpoint,
+    con rischio di data breach, abuso del servizio e violazioni privacy.
+  remediation_steps:
+    - "Implementare autenticazione su tutte le route API (JWT, OAuth2, API key)"
+    - "Proteggere endpoint sensibili con autorizzazione role-based"
+    - "Configurare rate limiting per prevenire abusi"
+  effort_range:
+    min_hours: 8
+    max_hours: 32
+    t_shirt: "L"
+  priority_tier: 1
+  stack_specific:
+    python:
+      remediation_steps:
+        - "Configurare FastAPI Security con OAuth2PasswordBearer o JWT"
+        - "Aggiungere dipendenza python-jose per token JWT"
+    javascript:
+      remediation_steps:
+        - "Installare passport.js o express-jwt per autenticazione"
+        - "Configurare middleware auth su tutte le route protette"
+  references:
+    - "NIST PR.AC-1"
+
+SEC-HTTPS-001:
+  risk_business: >
+    URL HTTP trasmettono dati in chiaro. Un attaccante sulla rete puo
+    intercettare credenziali, token e dati sensibili tramite
+    man-in-the-middle. Violazione di requisiti normativi sulla cifratura.
+  remediation_steps:
+    - "Sostituire tutti gli URL http:// con https://"
+    - "Configurare redirect HTTP->HTTPS a livello di server/load balancer"
+    - "Aggiungere HSTS header per forzare HTTPS"
+  effort_range:
+    min_hours: 1
+    max_hours: 4
+    t_shirt: "S"
+  priority_tier: 2
+  stack_specific: {}
+  references:
+    - "NIST PR.DS-2"
+
+SEC-CORS-001:
+  risk_business: >
+    CORS permissivo (allow all origins) espone le API a richieste
+    cross-origin non autorizzate. Un sito malevolo puo effettuare
+    richieste API a nome dell'utente autenticato (CSRF-like).
+  remediation_steps:
+    - "Restringere CORS alle sole origini autorizzate"
+    - "Specificare origin espliciti invece di wildcard *"
+    - "Configurare allowed methods e headers appropriati"
+  effort_range:
+    min_hours: 1
+    max_hours: 4
+    t_shirt: "S"
+  priority_tier: 2
+  stack_specific:
+    python:
+      remediation_steps:
+        - "In FastAPI: CORSMiddleware con allow_origins=['https://app.example.com']"
+        - "In Django: CORS_ALLOWED_ORIGINS con lista esplicita"
+    javascript:
+      remediation_steps:
+        - "In Express: cors({ origin: 'https://app.example.com' })"
+        - "Configurare lista whitelist di origini autorizzate"
+  references:
+    - "OWASP A01:2021"
+
+SEC-SQL-001:
+  risk_business: >
+    SQL injection permette a un attaccante di eseguire query arbitrarie
+    sul database. Puo leggere, modificare o cancellare tutti i dati,
+    bypassare autenticazione, e in alcuni casi eseguire comandi sul server.
+  remediation_steps:
+    - "Sostituire concatenazione stringhe con query parametrizzate"
+    - "Usare un ORM (SQLAlchemy, Prisma, GORM) per tutte le operazioni DB"
+    - "Implementare input validation e sanitization"
+  effort_range:
+    min_hours: 4
+    max_hours: 16
+    t_shirt: "M"
+  priority_tier: 1
+  stack_specific:
+    python:
+      remediation_steps:
+        - "Usare cursor.execute('SELECT * FROM x WHERE id = %s', (user_id,))"
+        - "Migrare a SQLAlchemy ORM per query type-safe"
+    javascript:
+      remediation_steps:
+        - "Usare query parametrizzate: db.query('SELECT * WHERE id = $1', [userId])"
+        - "Migrare a Prisma o Knex per query builder sicuro"
+  references:
+    - "OWASP A03:2021"
+
+SEC-SECRETS-CODE-001:
+  risk_business: >
+    Secrets hardcodati nel codice sono visibili a tutti gli sviluppatori
+    e nella cronologia git. Un leak del repository espone immediatamente
+    tutte le credenziali. Rischio critico di data breach e accesso non autorizzato.
+  remediation_steps:
+    - "Rimuovere tutti i secrets dal codice sorgente"
+    - "Usare variabili d'ambiente o un secret manager (Vault, AWS Secrets Manager)"
+    - "Aggiungere pre-commit hook per rilevare secrets (detect-secrets, gitleaks)"
+    - "Ruotare immediatamente tutte le credenziali esposte"
+  effort_range:
+    min_hours: 2
+    max_hours: 8
+    t_shirt: "S"
+  priority_tier: 1
+  stack_specific:
+    python:
+      remediation_steps:
+        - "Usare python-dotenv per caricare variabili da .env"
+        - "Configurare detect-secrets come pre-commit hook"
+    javascript:
+      remediation_steps:
+        - "Usare dotenv per caricare variabili da .env"
+        - "Configurare gitleaks o husky pre-commit per scan secrets"
+  references:
+    - "NIST PR.DS-5"
+
+SEC-HEADERS-001:
+  risk_business: >
+    Senza security headers, l'applicazione e vulnerabile a XSS,
+    clickjacking, content sniffing e altri attacchi browser-based.
+    I security headers sono una difesa a basso costo e alto impatto.
+  remediation_steps:
+    - "Aggiungere middleware per security headers (helmet, flask-talisman)"
+    - "Configurare Content-Security-Policy, X-Frame-Options, X-Content-Type-Options"
+    - "Abilitare Strict-Transport-Security (HSTS)"
+  effort_range:
+    min_hours: 1
+    max_hours: 4
+    t_shirt: "S"
+  priority_tier: 3
+  stack_specific:
+    python:
+      remediation_steps:
+        - "Django: aggiungere django.middleware.security.SecurityMiddleware"
+        - "Flask: installare flask-talisman e configurare CSP"
+    javascript:
+      remediation_steps:
+        - "Express: installare helmet e app.use(helmet())"
+        - "Configurare CSP con direttive appropriate"
+  references:
+    - "OWASP A05:2021"
+
+SEC-CRYPTO-001:
+  risk_business: >
+    Algoritmi crittografici deboli (MD5, SHA1, DES, RC4) sono vulnerabili
+    a collision e brute force. Le password hashate con MD5/SHA1 possono
+    essere craccate in secondi. Dati cifrati con DES sono facilmente decifrabili.
+  remediation_steps:
+    - "Sostituire MD5/SHA1 con SHA-256 o SHA-3 per hashing generico"
+    - "Usare bcrypt/argon2 per hashing password (NON SHA-256)"
+    - "Sostituire DES/RC4 con AES-256 per cifratura"
+  effort_range:
+    min_hours: 2
+    max_hours: 8
+    t_shirt: "S"
+  priority_tier: 2
+  stack_specific:
+    python:
+      remediation_steps:
+        - "Usare hashlib.sha256() al posto di hashlib.md5()"
+        - "Per password: installare bcrypt e usare bcrypt.hashpw()"
+    javascript:
+      remediation_steps:
+        - "Usare crypto.createHash('sha256') al posto di md5/sha1"
+        - "Per password: installare bcryptjs e usare bcrypt.hash()"
+  references:
+    - "NIST PR.DS-5"
+
+# ==============================================================
+# QUALITY — Layer 4
+# ==============================================================
+
+QUAL-DOC-001:
+  risk_business: >
+    Senza README, i nuovi sviluppatori non sanno come configurare,
+    buildare e contribuire al progetto. Il tempo di onboarding
+    aumenta drasticamente e le decisioni architetturali si perdono.
+  remediation_steps:
+    - "Creare un README.md con: descrizione progetto, prerequisiti, setup locale"
+    - "Aggiungere sezioni: architettura, come contribuire, deploy"
+    - "Includere badge per CI/CD status, coverage, versione"
+  effort_range:
+    min_hours: 1
+    max_hours: 4
+    t_shirt: "S"
+  priority_tier: 2
+  stack_specific: {}
+  references: []
+
+QUAL-DOC-002:
+  risk_business: >
+    Codice senza documentazione inline e difficile da capire per
+    sviluppatori diversi dall'autore. Il costo di manutenzione cresce,
+    le code review rallentano, e i bug da incomprensione aumentano.
+  remediation_steps:
+    - "Aggiungere docstring alle funzioni e classi pubbliche"
+    - "Documentare parametri, return type, e logica non ovvia"
+    - "Configurare un tool per enforcement (pydocstyle, jsdoc)"
+  effort_range:
+    min_hours: 4
+    max_hours: 16
+    t_shirt: "M"
+  priority_tier: 3
+  stack_specific:
+    python:
+      remediation_steps:
+        - "Aggiungere docstring Google/NumPy style alle funzioni pubbliche"
+        - "Configurare pydocstyle o ruff per enforcement"
+    javascript:
+      remediation_steps:
+        - "Aggiungere JSDoc alle funzioni esportate"
+        - "Configurare eslint-plugin-jsdoc per enforcement"
+  references: []
+
+QUAL-LINT-001:
+  risk_business: >
+    Senza linter, il codice accumula inconsistenze di stile, pattern
+    anti-pattern, e bug sottili che passano inosservati. Le code review
+    si spendono su formattazione invece che su logica.
+  remediation_steps:
+    - "Scegliere e configurare un linter per il linguaggio principale"
+    - "Integrare il linter nel CI/CD pipeline"
+    - "Configurare pre-commit hook per linting automatico"
+  effort_range:
+    min_hours: 2
+    max_hours: 8
+    t_shirt: "S"
+  priority_tier: 2
+  stack_specific:
+    python:
+      remediation_steps:
+        - "Configurare Ruff (ruff.toml) come linter + formatter"
+        - "Aggiungere ruff check e ruff format al CI pipeline"
+    javascript:
+      remediation_steps:
+        - "Configurare ESLint + Prettier o Biome"
+        - "Aggiungere eslint --fix al pre-commit hook"
+  references:
+    - "NIS2 Art.21(2)(a)"
+
+QUAL-TYPING-001:
+  risk_business: >
+    Senza type checking, i bug di tipo vengono scoperti solo a runtime.
+    Il refactoring e rischioso perche non ci sono garanzie che i contratti
+    tra moduli siano rispettati. L'IDE perde capacita di autocompletamento.
+  remediation_steps:
+    - "Configurare un type checker per il linguaggio principale"
+    - "Abilitare strict mode gradualmente (partire dai moduli core)"
+    - "Integrare type check nel CI/CD pipeline"
+  effort_range:
+    min_hours: 4
+    max_hours: 16
+    t_shirt: "M"
+  priority_tier: 3
+  stack_specific:
+    python:
+      remediation_steps:
+        - "Configurare mypy in pyproject.toml con [tool.mypy]"
+        - "Aggiungere type hint alle funzioni pubbliche gradualmente"
+    javascript:
+      remediation_steps:
+        - "Creare tsconfig.json con strict: true"
+        - "Rinominare file .js in .ts gradualmente"
+  references: []
+
+QUAL-COMPLEXITY-001:
+  risk_business: >
+    Codice con annidamento eccessivo (>5 livelli) e difficile da leggere,
+    testare e debuggare. Ogni livello di nesting raddoppia i path possibili,
+    rendendo il codice fragile e il testing incompleto.
+  remediation_steps:
+    - "Applicare early return / guard clause per ridurre nesting"
+    - "Estrarre blocchi annidati in funzioni dedicate"
+    - "Semplificare condizioni complesse con variabili esplicative"
+  effort_range:
+    min_hours: 4
+    max_hours: 16
+    t_shirt: "M"
+  priority_tier: 3
+  stack_specific: {}
+  references: []
+
+QUAL-DUP-001:
+  risk_business: >
+    File con lo stesso nome in directory diverse suggeriscono duplicazione
+    da copy-paste. Il codice duplicato raddoppia il costo di ogni modifica
+    e introduce inconsistenze quando solo una copia viene aggiornata.
+  remediation_steps:
+    - "Identificare le copie e determinare quale e la versione autoritativa"
+    - "Estrarre la logica comune in un modulo condiviso"
+    - "Eliminare le copie superflue e aggiornare gli import"
+  effort_range:
+    min_hours: 4
+    max_hours: 16
+    t_shirt: "M"
+  priority_tier: 3
+  stack_specific: {}
+  references: []
+
+QUAL-PRECOMMIT-001:
+  risk_business: >
+    Senza pre-commit hook, codice non conforme, secrets accidentali e
+    file di debug possono finire nel repository. Ogni commit errato
+    richiede un revert o un fix, rallentando il team.
+  remediation_steps:
+    - "Installare pre-commit (pip install pre-commit) o Husky (npx husky init)"
+    - "Configurare hook per linting, formatting e secret scanning"
+    - "Aggiungere .pre-commit-config.yaml o .husky/ al repository"
+  effort_range:
+    min_hours: 1
+    max_hours: 4
+    t_shirt: "S"
+  priority_tier: 3
+  stack_specific:
+    python:
+      remediation_steps:
+        - "pip install pre-commit && pre-commit install"
+        - "Creare .pre-commit-config.yaml con hook per ruff, mypy, detect-secrets"
+    javascript:
+      remediation_steps:
+        - "npx husky init && npm install --save-dev lint-staged"
+        - "Configurare lint-staged in package.json per eslint e prettier"
+  references: []
+
+QUAL-EDITORCONFIG-001:
+  risk_business: >
+    Senza EditorConfig, sviluppatori con editor diversi producono
+    formattazione inconsistente (tab vs spazi, fine riga diversi),
+    generando diff inutili e conflitti di merge.
+  remediation_steps:
+    - "Creare .editorconfig nella root con le impostazioni del progetto"
+    - "Definire indent_style, indent_size, end_of_line, charset"
+    - "Verificare che gli editor del team supportino EditorConfig"
+  effort_range:
+    min_hours: 1
+    max_hours: 1
+    t_shirt: "XS"
+  priority_tier: 3
+  stack_specific: {}
+  references: []
+
+QUAL-CONTRIBUTING-001:
+  risk_business: >
+    Senza linee guida per i contributori, i nuovi sviluppatori perdono
+    tempo a capire convenzioni, workflow e standard del progetto.
+    Le PR hanno qualita variabile e richiedono piu review.
+  remediation_steps:
+    - "Creare CONTRIBUTING.md con istruzioni per setup locale"
+    - "Documentare convenzioni di codice, branch naming e commit message"
+    - "Includere checklist per le pull request"
+  effort_range:
+    min_hours: 2
+    max_hours: 4
+    t_shirt: "S"
+  priority_tier: 3
+  stack_specific: {}
+  references: []
+
+QUAL-CHANGELOG-001:
+  risk_business: >
+    Senza changelog, gli stakeholder non possono tracciare le modifiche
+    tra versioni. Il team perde tempo a ricostruire la storia dai commit
+    e i release notes sono incompleti o assenti.
+  remediation_steps:
+    - "Creare CHANGELOG.md seguendo il formato Keep a Changelog"
+    - "Documentare Added, Changed, Fixed, Removed per ogni versione"
+    - "Considerare tool automatici (conventional-changelog, towncrier)"
+  effort_range:
+    min_hours: 1
+    max_hours: 3
+    t_shirt: "S"
+  priority_tier: 3
+  stack_specific: {}
+  references: []
+
+INFRA-ENVEXAMPLE-001:
+  risk_business: >
+    Quando .env e in .gitignore ma non esiste un .env.example,
+    i nuovi sviluppatori non sanno quali variabili d'ambiente configurare.
+    Setup lento, errori a runtime e richieste di supporto frequenti.
+  remediation_steps:
+    - "Creare .env.example con tutte le variabili necessarie e valori placeholder"
+    - "Documentare ogni variabile con un commento nel file"
+    - "Aggiornare il README con istruzioni per copiare .env.example in .env"
+  effort_range:
+    min_hours: 1
+    max_hours: 2
+    t_shirt: "XS"
+  priority_tier: 3
+  stack_specific: {}
+  references: []

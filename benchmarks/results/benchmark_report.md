@@ -1,0 +1,95 @@
+# Benchmark CTO Audit Agent
+
+Data: 2026-02-27 17:43
+Repo testate: 20
+
+## Risultati per repo
+
+| # | Repo | Language | Score | Findings | Tempo | Top Issues |
+|---|------|----------|-------|----------|-------|-----------|
+| 1 | httpie-cli | python | 81.11 | 24 | 3.1s | INFRA-DOCKER-004, INFRA-DOCKER-002, INFRA-DEPS-001, INFRA-CICD-INFO, INFRA-MON-001 |
+| 2 | fastapi-users | python | 78.4 | 24 | 1.2s | INFRA-CICD-INFO, QUAL-COMPLEXITY-001, SEC-HTTPS-001, INFRA-DEPS-001, QUAL-DOC-002 |
+| 3 | black | python | 77.41 | 42 | 5.3s | INFRA-DOCKER-004, INFRA-DOCKER-002, INFRA-DEPS-001, QUAL-EDITORCONFIG-001, INFRA-CICD-INFO |
+| 4 | scrapy | python | 82.86 | 70 | 8.1s | QUAL-CHANGELOG-001, SEC-CRYPTO-001, QUAL-EDITORCONFIG-001, INFRA-CICD-INFO, SEC-CORS-001 |
+| 5 | sanic | python | 76.75 | 68 | 6.5s | INFRA-CICD-INFO, QUAL-COMPLEXITY-001, SEC-HTTPS-001, INFRA-DEPS-001, QUAL-DOC-002 |
+| 6 | express | javascript | 80.02 | 30 | 3.9s | INFRA-DEPS-001, INFRA-CICD-INFO, INFRA-MON-001, QUAL-COMPLEXITY-001, QUAL-PRECOMMIT-001 |
+| 7 | fastify | javascript | 76.19 | 72 | 6.9s | INFRA-DEPS-001, SEC-CRYPTO-001, QUAL-CHANGELOG-001, INFRA-CICD-INFO, QUAL-COMPLEXITY-001 |
+| 8 | ghost | javascript | 62.38 | 330 | 103.3s | INFRA-CICD-INFO, SEC-CORS-001, QUAL-COMPLEXITY-001, SEC-HTTPS-001, SEC-SECRETS-CODE-001 |
+| 9 | socket.io | typescript | 55.83 | 49 | 9.6s | INFRA-CICD-INFO, QUAL-COMPLEXITY-001, SEC-HTTPS-001, SEC-SECRETS-CODE-001, INFRA-DOCKER-002 |
+| 10 | gin | go | 81.18 | 26 | 1.9s | QUAL-EDITORCONFIG-001, INFRA-CICD-INFO, INFRA-MON-001, QUAL-COMPLEXITY-001, QUAL-PRECOMMIT-001 |
+| 11 | fiber | go | 83.25 | 72 | 5.6s | QUAL-CHANGELOG-001, INFRA-CICD-INFO, SEC-CORS-001, QUAL-COMPLEXITY-001, QUAL-DOC-001 |
+| 12 | minio | go | 71.93 | 199 | 21.1s | INFRA-CICD-INFO, QUAL-COMPLEXITY-001, SEC-HTTPS-001, SEC-SECRETS-CODE-001, QUAL-CHANGELOG-001 |
+| 13 | spring-petclinic | java | 82.78 | 16 | 1.5s | INFRA-DOCKER-004, INFRA-DOCKER-002, QUAL-CHANGELOG-001, INFRA-CICD-INFO, QUAL-COMPLEXITY-001 |
+| 14 | java-design-patterns | java | 75.28 | 18 | 27.0s | ARCH-DB-001, QUAL-CHANGELOG-001, INFRA-CICD-INFO, QUAL-COMPLEXITY-001, QUAL-PRECOMMIT-001 |
+| 15 | jekyll | ruby | 86.5 | 34 | 6.8s | INFRA-CICD-INFO, QUAL-COMPLEXITY-001, QUAL-DOC-001, SEC-HTTPS-001, INFRA-DEPS-001 |
+| 16 | mastodon | ruby | 66.49 | 74 | 100.6s | INFRA-CICD-INFO, SEC-CORS-001, QUAL-COMPLEXITY-001, SEC-HTTPS-001, SEC-SECRETS-CODE-001 |
+| 17 | ripgrep | rust | 90.41 | 45 | 1.0s | QUAL-EDITORCONFIG-001, INFRA-CICD-INFO, INFRA-MON-001, QUAL-COMPLEXITY-001, QUAL-PRECOMMIT-001 |
+| 18 | laravel | php | 82.84 | 13 | 0.3s | INFRA-DEPS-001, INFRA-CICD-INFO, INFRA-MON-001, QUAL-PRECOMMIT-001, QUAL-CONTRIBUTING-001 |
+| 19 | clean-architecture | csharp | 87.98 | 17 | 0.5s | QUAL-CHANGELOG-001, INFRA-CICD-INFO, INFRA-MON-001, QUAL-COMPLEXITY-001, QUAL-PRECOMMIT-001 |
+| 20 | redis | c | 81.75 | 222 | 2.9s | QUAL-CHANGELOG-001, QUAL-EDITORCONFIG-001, INFRA-CICD-INFO, INFRA-MON-001, QUAL-COMPLEXITY-001 |
+
+## Statistiche
+
+- **Media**: 78.1/100
+- **Mediana**: 81.1/100
+- **Min**: 55.8/100
+- **Max**: 90.4/100
+- **Deviazione standard**: 8.3
+
+## Detection Rate per Regola
+
+| Regola | Detection Rate | Count |
+|--------|---------------|-------|
+| INFRA-CICD-INFO | 100.0% | 20/20 |
+| INFRA-CONFIG-002 | 100.0% | 20/20 |
+| INFRA-IAC-001 | 100.0% | 20/20 |
+| QUAL-COMPLEXITY-001 | 95.0% | 19/20 |
+| ARCH-SCALE-001 | 95.0% | 19/20 |
+| ARCH-SCALE-INFO | 85.0% | 17/20 |
+| SEC-HTTPS-001 | 85.0% | 17/20 |
+| QUAL-PRECOMMIT-001 | 80.0% | 16/20 |
+| QUAL-DUP-001 | 80.0% | 16/20 |
+| SEC-SQL-001 | 75.0% | 15/20 |
+| QUAL-CHANGELOG-001 | 55.0% | 11/20 |
+| INFRA-DOCKER-004 | 45.0% | 9/20 |
+| QUAL-TYPING-001 | 45.0% | 9/20 |
+| INFRA-DOCKER-005 | 45.0% | 9/20 |
+| INFRA-DOCKER-003 | 45.0% | 9/20 |
+| QUAL-DOC-002 | 45.0% | 9/20 |
+| QUAL-CONTRIBUTING-001 | 45.0% | 9/20 |
+| ARCH-STRUCT-INFO | 45.0% | 9/20 |
+| INFRA-DEPS-001 | 40.0% | 8/20 |
+| INFRA-MON-001 | 40.0% | 8/20 |
+| QUAL-EDITORCONFIG-001 | 40.0% | 8/20 |
+| SEC-AUTH-001 | 40.0% | 8/20 |
+| INFRA-DOCKER-002 | 30.0% | 6/20 |
+| SEC-SECRETS-CODE-001 | 30.0% | 6/20 |
+| SEC-CRYPTO-001 | 30.0% | 6/20 |
+| ARCH-COUPLING-002 | 30.0% | 6/20 |
+| INFRA-DOCKER-INFO | 30.0% | 6/20 |
+| INFRA-CONFIG-001 | 25.0% | 5/20 |
+| INFRA-ENVEXAMPLE-001 | 20.0% | 4/20 |
+| INFRA-DOCKER-001 | 20.0% | 4/20 |
+| SEC-CORS-001 | 20.0% | 4/20 |
+| ARCH-DB-001 | 15.0% | 3/20 |
+| ARCH-COUPLING-INFO | 15.0% | 3/20 |
+| ARCH-COUPLING-001 | 15.0% | 3/20 |
+| QUAL-LINT-001 | 10.0% | 2/20 |
+| QUAL-DOC-001 | 10.0% | 2/20 |
+| SEC-HEADERS-001 | 5.0% | 1/20 |
+| SEC-DEPS-001 | 5.0% | 1/20 |
+
+## Score per Linguaggio
+
+| Linguaggio | Score Medio |
+|-----------|-------------|
+| c | 81.8/100 |
+| csharp | 88.0/100 |
+| go | 78.8/100 |
+| java | 79.0/100 |
+| javascript | 72.9/100 |
+| php | 82.8/100 |
+| python | 79.3/100 |
+| ruby | 76.5/100 |
+| rust | 90.4/100 |
+| typescript | 55.8/100 |

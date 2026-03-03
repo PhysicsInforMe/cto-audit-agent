@@ -1,0 +1,363 @@
+# Profilo di scoring default — CTO Audit Agent
+#
+# Pesi layer: quanto ogni layer contribuisce allo score complessivo.
+# Penalità per regola: punti sottratti dallo score del layer (su base 100).
+# Le severità nel profilo devono corrispondere a quelle negli analyzer.
+#
+# Ogni peso e penalità è difendibile con citation dalla letteratura.
+# Approccio: pesare per CONSEGUENZA (costo/tempo di riparazione del danno).
+
+name: default
+description: "Profilo CTO default — bilanciato su tutti i layer"
+
+# Pesi relativi per layer (devono sommare a 1.0)
+#
+# Fonte: IBM/Ponemon 2025, DORA 2024, CISQ 2022, Boehm 1981, Stripe 2018
+#
+# Security 0.30 (era 0.25): conseguenza massima per incidente.
+#   Un breach è potenzialmente esistenziale ($4.44M avg, IBM 2025).
+#   Penalità regolamentari fino a 4% fatturato (GDPR Art.83).
+#   Tempo di contenimento: 241 giorni (IBM 2025).
+#
+# Architecture 0.25 (invariato): costo che cresce esponenzialmente (Fowler).
+#   $1.52T in tech debt (CISQ 2022). 25-51% budget IT su remediation.
+#   Non è acuto come security ma è cronico e paralizzante.
+#
+# Infrastructure 0.25 (era 0.35): importante ma RECUPERABILE.
+#   DORA 2024: elite teams MTTR <1h. Anche i low performers recuperano.
+#   Costo = downtime × revenue, ma bounded nel tempo.
+#
+# Quality 0.20 (era 0.15): sottostimato prima.
+#   Boehm: defect in produzione 10-100x. Stripe: 42% del tempo dev su debt.
+#   Amplifica tutti gli altri problemi.
+layer_weights:
+  security: 0.30
+  architecture: 0.25
+  infra: 0.25
+  quality: 0.20
+
+# Peso default per regole non presenti nel profilo
+default_rule_weight: 0.5
+
+# Regole per layer
+rules:
+  # ============================================================
+  # INFRA — Layer 1 (peso layer: 0.25)
+  # ============================================================
+
+  # Fonte: Google DORA State of DevOps 2024 — CI/CD è #1 predictor di elite performance
+  # Conseguenza: rallentamento delivery, regressioni non catturate, incidenti prolungati
+  # Penalty -20 (era -25): si recupera in settimane. Non è "critical" come un secret esposto
+  INFRA-CICD-001:
+    severity: high
+    weight: 0.9
+    penalty: -20
+    framework_ref: "NIST PR.DS-6"
+    description: "Nessun CI/CD pipeline rilevato"
+
+  INFRA-CICD-INFO:
+    severity: info
+    weight: 0.0
+    penalty: 0
+    description: "CI/CD rilevato (informativo)"
+
+  # Fonte: DORA 2024 — container NON è predictor primario di elite performance
+  # Conseguenza: deploy meno riproducibile, ma VM con Ansible funziona
+  # Penalty -8 (era -20): una libreria/CLI non ha bisogno di Docker
+  INFRA-DOCKER-001:
+    severity: medium
+    weight: 0.5
+    penalty: -8
+    description: "Nessuna containerizzazione rilevata"
+
+  # Regola INFO per progetti non-deployable (librerie, CLI, scraper)
+  # Non ha senso penalizzare un CLI tool Python per "niente Docker"
+  INFRA-DOCKER-INFO:
+    severity: info
+    weight: 0.0
+    penalty: 0
+    description: "Nessuna containerizzazione (non richiesta per questo tipo di progetto)"
+
+  INFRA-DOCKER-002:
+    severity: low
+    weight: 0.3
+    penalty: -3
+    description: ".dockerignore non presente"
+
+  INFRA-DOCKER-003:
+    severity: medium
+    weight: 0.5
+    penalty: -5
+    description: "Dockerfile senza multi-stage build"
+
+  INFRA-DOCKER-004:
+    severity: medium
+    weight: 0.6
+    penalty: -8
+    description: "Dockerfile esegue come root"
+
+  INFRA-DOCKER-005:
+    severity: low
+    weight: 0.3
+    penalty: -3
+    description: "Dockerfile senza HEALTHCHECK"
+
+  INFRA-IAC-001:
+    severity: high
+    weight: 0.7
+    penalty: -10
+    description: "Nessun Infrastructure as Code rilevato"
+
+  # Fonte: NIS2 Art.21(2)(d) — supply chain security
+  # Conseguenza: build non riproducibili, supply chain attack via version range
+  INFRA-DEPS-001:
+    severity: high
+    weight: 0.8
+    penalty: -12
+    framework_ref: "NIS2 Art.21(2)(d)"
+    description: "Nessun lockfile presente"
+
+  INFRA-CONFIG-001:
+    severity: high
+    weight: 0.8
+    penalty: -15
+    description: "File .env con dati sensibili nel repository"
+
+  INFRA-CONFIG-002:
+    severity: high
+    weight: 0.8
+    penalty: -15
+    description: "Secrets rilevati in file di configurazione"
+
+  # Fonte: NIS2 Art.21(2)(c) — incident handling e business continuity
+  INFRA-MON-001:
+    severity: medium
+    weight: 0.5
+    penalty: -8
+    framework_ref: "NIS2 Art.21(2)(c)"
+    description: "Nessun monitoraggio rilevato"
+
+  # .env.example mancante quando .gitignore ha .env
+  INFRA-ENVEXAMPLE-001:
+    severity: medium
+    weight: 0.4
+    penalty: -5
+    description: ".env.example mancante"
+
+  # ============================================================
+  # ARCHITECTURE — Layer 2 (peso layer: 0.25)
+  # ============================================================
+
+  ARCH-STRUCT-001:
+    severity: medium
+    weight: 0.5
+    penalty: -8
+    description: "Struttura directory flat/caotica"
+
+  ARCH-STRUCT-INFO:
+    severity: info
+    weight: 0.0
+    penalty: 0
+    description: "Pattern architetturale rilevato (informativo)"
+
+  ARCH-COUPLING-001:
+    severity: high
+    weight: 0.8
+    penalty: -15
+    description: "Import circolari rilevati"
+
+  ARCH-COUPLING-002:
+    severity: medium
+    weight: 0.5
+    penalty: -5
+    description: "Fan-out eccessivo"
+
+  ARCH-COUPLING-INFO:
+    severity: info
+    weight: 0.0
+    penalty: 0
+    description: "Fan-out elevato (informativo, oltre il cap normalizzato)"
+
+  ARCH-SCALE-001:
+    severity: medium
+    weight: 0.4
+    penalty: -3
+    description: "File molto grande (>500 LOC)"
+
+  ARCH-SCALE-INFO:
+    severity: info
+    weight: 0.0
+    penalty: 0
+    description: "File grande (informativo, oltre il cap normalizzato)"
+
+  # Fonte: Boehm Defect Cost Curve 1981 — defect in produzione costa 10-100x vs design
+  # Fonte: DORA 2024 — testing è key capability per elite performance
+  # Conseguenza: ogni change senza test è un rischio; costo defect esponenziale
+  # Penalty -22 (era -20): più grave di mancanza Docker, riflette costo defect
+  ARCH-TEST-001:
+    severity: critical
+    weight: 1.0
+    penalty: -22
+    description: "Nessuna directory o file di test rilevati"
+
+  ARCH-DB-001:
+    severity: medium
+    weight: 0.5
+    penalty: -8
+    description: "ORM rilevato ma nessuna gestione migrazioni"
+
+  # ============================================================
+  # SECURITY — Layer 3 (peso layer: 0.30)
+  # ============================================================
+
+  # Fonte: Verizon DBIR 2024 — 15% breach da supply chain
+  # Conseguenza: CVE note sfruttabili senza 0-day
+  SEC-DEPS-001:
+    severity: high
+    weight: 0.8
+    penalty: -12
+    framework_ref: "NIS2 Art.21(2)(d)"
+    description: "Dipendenze con versioni notoriamente vulnerabili (check statico)"
+
+  # Fonte: Verizon DBIR 2024, NVD/OSV database — supply chain è vettore in crescita
+  # Conseguenza: vulnerabilità note sfruttabili con exploit pubblici
+  # Attivo solo in modalità online (interroga API OSV di Google)
+  SEC-DEPS-CVE-001:
+    severity: high
+    weight: 0.8
+    penalty: -15
+    framework_ref: "NIS2 Art.21(2)(d)"
+    description: "CVE note trovate nelle dipendenze (fonte: Google OSV)"
+
+  # Fonte: NIST PR.AC-1 — access control
+  # Conseguenza: accesso non autorizzato a dati e funzionalità
+  SEC-AUTH-001:
+    severity: high
+    weight: 0.8
+    penalty: -15
+    framework_ref: "NIST PR.AC-1"
+    description: "Nessun framework di autenticazione rilevato"
+
+  SEC-HTTPS-001:
+    severity: medium
+    weight: 0.5
+    penalty: -5
+    framework_ref: "NIST PR.DS-2"
+    description: "URL HTTP non cifrati nel codice"
+
+  SEC-CORS-001:
+    severity: medium
+    weight: 0.5
+    penalty: -5
+    framework_ref: "OWASP A01:2021"
+    description: "CORS permissivo (* origins)"
+
+  # Fonte: OWASP A03:2021 — Injection, ~$196K per attacco
+  # Conseguenza: lettura/modifica/cancellazione dati, bypass autenticazione
+  SEC-SQL-001:
+    severity: high
+    weight: 0.9
+    penalty: -18
+    framework_ref: "OWASP A03:2021"
+    description: "Possibile SQL Injection via string concat"
+
+  # Fonte: IBM/Ponemon 2025 — 38% dei breach da credential theft (Verizon DBIR 2024)
+  # Conseguenza: esistenziale — accesso diretto a DB, API, infra cloud
+  # Penalty -25: massima singola regola, riflette rischio breach immediato
+  SEC-SECRETS-CODE-001:
+    severity: critical
+    weight: 1.0
+    penalty: -25
+    framework_ref: "NIST PR.DS-5"
+    description: "Secrets hardcodati nel codice sorgente"
+
+  SEC-HEADERS-001:
+    severity: low
+    weight: 0.3
+    penalty: -3
+    framework_ref: "OWASP A05:2021"
+    description: "Nessun middleware per security headers"
+
+  # Fonte: NIS2 Art.21(2)(g) — crittografia obbligatoria. NIST: MD5/SHA1 deprecati
+  # Conseguenza: weak crypto abilita breach, non compliance NIS2/GDPR
+  # Penalty -8 (era -5): riflette obbligo normativo e rischio abilitante
+  SEC-CRYPTO-001:
+    severity: medium
+    weight: 0.6
+    penalty: -8
+    framework_ref: "NIST PR.DS-5"
+    description: "Pattern crittografici deboli (MD5, SHA1, DES, RC4)"
+
+  # ============================================================
+  # QUALITY — Layer 4 (peso layer: 0.20)
+  # ============================================================
+
+  QUAL-DOC-001:
+    severity: medium
+    weight: 0.5
+    penalty: -8
+    description: "Nessun README nella root del progetto"
+
+  QUAL-DOC-002:
+    severity: low
+    weight: 0.3
+    penalty: -3
+    description: "Documentazione inline insufficiente"
+
+  # Fonte: conseguenza diretta bassa rispetto a mancanza di test o secret esposti
+  # Penalty -8 (era -10): linter è igiene, non sicurezza
+  QUAL-LINT-001:
+    severity: medium
+    weight: 0.5
+    penalty: -8
+    framework_ref: "NIS2 Art.21(2)(a)"
+    description: "Nessun linter o formatter configurato"
+
+  QUAL-TYPING-001:
+    severity: low
+    weight: 0.3
+    penalty: -3
+    description: "Nessun type checking configurato"
+
+  # Fonte: Capers Jones 2010 — nesting correla con defect density
+  # Conseguenza: codice complesso è più costoso da manutenere e testare
+  # Penalty -7 (era -5): riflette correlazione dimostrata con defect
+  QUAL-COMPLEXITY-001:
+    severity: medium
+    weight: 0.5
+    penalty: -7
+    description: "Codice eccessivamente annidato"
+
+  QUAL-DUP-001:
+    severity: low
+    weight: 0.3
+    penalty: -3
+    description: "File con nome identico in directory diverse (copy-paste)"
+
+  # Pre-commit hook: previene commit di codice non conforme
+  QUAL-PRECOMMIT-001:
+    severity: medium
+    weight: 0.4
+    penalty: -5
+    description: "Nessun pre-commit hook configurato"
+
+  # EditorConfig: consistenza formattazione tra editor
+  QUAL-EDITORCONFIG-001:
+    severity: low
+    weight: 0.2
+    penalty: -2
+    description: "Nessun .editorconfig presente"
+
+  # CONTRIBUTING.md: linee guida per contributori
+  QUAL-CONTRIBUTING-001:
+    severity: low
+    weight: 0.2
+    penalty: -2
+    description: "Nessun CONTRIBUTING.md presente"
+
+  # CHANGELOG: tracking delle modifiche
+  QUAL-CHANGELOG-001:
+    severity: low
+    weight: 0.2
+    penalty: -2
+    description: "Nessun CHANGELOG presente"

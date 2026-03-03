@@ -1,0 +1,45 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.egg-info/
+*.egg
+dist/
+build/
+*.whl
+
+# Virtual environments
+.venv/
+.myself/
+venv/
+env/
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# pytest / coverage
+.pytest_cache/
+.coverage
+htmlcov/
+
+# mypy
+.mypy_cache/
+
+# Benchmark cloned repos (large, re-cloneable)
+benchmarks/repos/
+
+# Generated outputs (reproducible)
+pitch/output/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Claude Code local state
+.claude/
+
+# External documents
+AI_Risk_Evaluation_Provisional_Main*.pdf
