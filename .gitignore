@@ -43,3 +43,8 @@ Thumbs.db
 
 # External documents
 AI_Risk_Evaluation_Provisional_Main*.pdf
+
+# Local-only docs (not for GitHub)
+docs/PATENT_ANALYSIS.md
+docs/READING_ORDER.md
+docs/TESTER_GUIDE.html
