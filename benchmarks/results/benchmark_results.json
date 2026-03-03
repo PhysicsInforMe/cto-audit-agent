@@ -1,7 +1,7 @@
 {
   "timestamp": "2026-02-27 17:43:57",
   "repos": {
-    "httpie-cli": {
+    "CLI Tool A": {
       "config": {
         "language": "python",
         "category": "cli",
@@ -185,7 +185,7 @@
       },
       "elapsed_seconds": 3.1
     },
-    "fastapi-users": {
+    "Auth Library": {
       "config": {
         "language": "python",
         "category": "library",
@@ -370,7 +370,7 @@
       },
       "elapsed_seconds": 1.2
     },
-    "black": {
+    "Developer Tool": {
       "config": {
         "language": "python",
         "category": "cli",
@@ -662,7 +662,7 @@
       },
       "elapsed_seconds": 5.3
     },
-    "scrapy": {
+    "Web Scraping Framework": {
       "config": {
         "language": "python",
         "category": "framework",
@@ -1120,7 +1120,7 @@
       },
       "elapsed_seconds": 8.1
     },
-    "sanic": {
+    "Web Framework A": {
       "config": {
         "language": "python",
         "category": "framework",
@@ -1572,7 +1572,7 @@
       },
       "elapsed_seconds": 6.5
     },
-    "express": {
+    "Web Framework B": {
       "config": {
         "language": "javascript",
         "category": "framework",
@@ -1792,7 +1792,7 @@
       },
       "elapsed_seconds": 3.9
     },
-    "fastify": {
+    "Web Framework C": {
       "config": {
         "language": "javascript",
         "category": "framework",
@@ -2264,7 +2264,7 @@
       },
       "elapsed_seconds": 6.9
     },
-    "ghost": {
+    "CMS Platform": {
       "config": {
         "language": "javascript",
         "category": "cms",
@@ -4289,7 +4289,7 @@
       },
       "elapsed_seconds": 103.3
     },
-    "socket.io": {
+    "Realtime Library": {
       "config": {
         "language": "typescript",
         "category": "library",
@@ -4625,7 +4625,7 @@
       },
       "elapsed_seconds": 9.6
     },
-    "gin": {
+    "Web Framework D": {
       "config": {
         "language": "go",
         "category": "framework",
@@ -4817,7 +4817,7 @@
       },
       "elapsed_seconds": 1.9
     },
-    "fiber": {
+    "Web Framework E": {
       "config": {
         "language": "go",
         "category": "framework",
@@ -5286,7 +5286,7 @@
       },
       "elapsed_seconds": 5.6
     },
-    "minio": {
+    "Object Storage": {
       "config": {
         "language": "go",
         "category": "app",
@@ -6521,7 +6521,7 @@
       },
       "elapsed_seconds": 21.1
     },
-    "spring-petclinic": {
+    "Web App": {
       "config": {
         "language": "java",
         "category": "app",
@@ -6655,7 +6655,7 @@
       },
       "elapsed_seconds": 1.5
     },
-    "java-design-patterns": {
+    "Reference Codebase": {
       "config": {
         "language": "java",
         "category": "library",
@@ -6799,7 +6799,7 @@
       },
       "elapsed_seconds": 27.0
     },
-    "jekyll": {
+    "Static Site Generator": {
       "config": {
         "language": "ruby",
         "category": "cli",
@@ -7044,7 +7044,7 @@
       },
       "elapsed_seconds": 6.8
     },
-    "mastodon": {
+    "Social Platform": {
       "config": {
         "language": "ruby",
         "category": "app",
@@ -7532,7 +7532,7 @@
       },
       "elapsed_seconds": 100.6
     },
-    "ripgrep": {
+    "CLI Tool B": {
       "config": {
         "language": "rust",
         "category": "cli",
@@ -7836,7 +7836,7 @@
       },
       "elapsed_seconds": 1.0
     },
-    "laravel": {
+    "Web Framework F": {
       "config": {
         "language": "php",
         "category": "framework",
@@ -7949,7 +7949,7 @@
       },
       "elapsed_seconds": 0.3
     },
-    "clean-architecture": {
+    "Architecture Template": {
       "config": {
         "language": "csharp",
         "category": "app",
@@ -8088,7 +8088,7 @@
       },
       "elapsed_seconds": 0.5
     },
-    "redis": {
+    "Database Engine": {
       "config": {
         "language": "c",
         "category": "app",
