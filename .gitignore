@@ -48,3 +48,9 @@ AI_Risk_Evaluation_Provisional_Main*.pdf
 docs/PATENT_ANALYSIS.md
 docs/READING_ORDER.md
 docs/TESTER_GUIDE.html
+01-cto-audit-concept.md
+02-cto-audit-architecture.md
+03-cto-audit-hitl-flow.md
+
+# Pitch deck (local only)
+pitch/
