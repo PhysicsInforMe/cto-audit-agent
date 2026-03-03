@@ -147,4 +147,4 @@ Il tool si differenzia dai brevetti esistenti (US10275600B2 e simili) per:
 
 ## Documenti Correlati
 
-Per una guida di lettura top-down di tutta la documentazione, vedi [READING_ORDER.md](READING_ORDER.md).
+Vedi il [README](../README.md) per la lista completa della documentazione disponibile.

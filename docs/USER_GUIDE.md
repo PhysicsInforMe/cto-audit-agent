@@ -53,8 +53,10 @@ python --version
 Dovresti vedere qualcosa come `Python 3.12.x`. Se da errore, Python non e installato o non e nel PATH.
 
 ```bash
-# 2. Installa CTO Audit Agent
-pip install cto-audit
+# 2. Clona e installa CTO Audit Agent
+git clone https://github.com/PhysicsInforMe/cto-audit-agent.git
+cd cto-audit-agent
+pip install -e .
 ```
 
 Aspetta che finisca (puo richiedere 1-2 minuti). Vedrai del testo scorrere — e normale.

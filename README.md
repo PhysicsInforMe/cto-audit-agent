@@ -21,7 +21,17 @@ CTO Audit Agent e uno strumento da riga di comando scritto in Python che analizz
 Apri un terminale (Prompt dei comandi su Windows, Terminal su macOS/Linux, oppure il terminale integrato di VS Code con `` Ctrl+` ``) e digita:
 
 ```bash
-pip install cto-audit
+git clone https://github.com/PhysicsInforMe/cto-audit-agent.git
+cd cto-audit-agent
+pip install -e .
+```
+
+Extras opzionali:
+
+```bash
+pip install -e ".[nlp]"          # Project type detection avanzata (Sentence-BERT)
+pip install -e ".[pdf]"          # Export report in PDF
+pip install -e ".[llm-local]"    # Integrazione Ollama
 ```
 
 ## Quick Start
@@ -241,21 +251,23 @@ pie title Pesi Layer — Profilo Default
     "Quality (0.20)" : 20
 ```
 
-## Test
-
-La suite di test comprende **733 test** distribuiti in 31 file, con 7 scenari end-to-end realistici.
+## Development
 
 ```bash
+git clone https://github.com/PhysicsInforMe/cto-audit-agent.git
+cd cto-audit-agent
+pip install -e ".[dev]"
 pytest
 ```
+
+La suite di test comprende **733 test** distribuiti in 31 file, con 7 scenari end-to-end realistici.
 
 ## Documentazione
 
 - **[Project Overview](docs/PROJECT_OVERVIEW.md)**: overview strategico, differenziatori, metriche chiave
 - **[User Guide](docs/USER_GUIDE.md)**: guida completa per interpretare i risultati, personalizzare i profili e scenari d'uso
 - **[Tester Guide](docs/TESTER_GUIDE.md)**: come testare e validare il tool
-- **[Reading Order](docs/READING_ORDER.md)**: guida di lettura top-down per tutta la documentazione
-- **[Validation Methodology](docs/VALIDATION_METHODOLOGY.md)**: metodologia di validazione tramite Claude Code come ground truth
+- **[Validation Methodology](docs/VALIDATION_METHODOLOGY.md)**: metodologia di validazione
 
 ## Validazione
 
