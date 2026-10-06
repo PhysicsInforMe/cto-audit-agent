@@ -37,6 +37,7 @@ from cto_audit.core.models import (
     GitSummary,
     HealthScore,
     Layer,
+    TriageDecision,
     ProjectTypeResult,
     StackInfo,
 )
@@ -75,6 +76,9 @@ class AuditOrchestrator:
         compliance_profiles: Optional[list[str]] = None,
         previous_result: Optional[AuditResult] = None,
         llm_router: Optional[object] = None,
+        triage: bool = False,
+        triage_input_fn: Optional[object] = None,
+        labels_path: Optional[Path] = None,
     ) -> None:
         self.source = source
         self.target_path = target_path
@@ -89,6 +93,10 @@ class AuditOrchestrator:
         self.compliance_profiles = compliance_profiles or []
         self.previous_result = previous_result
         self._llm_router = llm_router
+        self.triage = triage
+        self._triage_input_fn = triage_input_fn
+        self._labels_path = labels_path
+        self.triage_files: tuple[Path | None, Path | None] = (None, None)
         self._network_consented: bool | None = None
         self._git_summary: GitSummary | None = None
         self._dependency_licenses: list[dict] = []
@@ -190,7 +198,26 @@ class AuditOrchestrator:
                 result, engine, stack_info
             )
 
+        # --- Fase 7: Triage HITL dei finding (etichette; lo score non cambia) ---
+        if self.triage and not self.auto_approve:
+            result.triage = self._run_triage(result)
+
         return result
+
+    def _run_triage(self, result: AuditResult) -> list[TriageDecision]:
+        """Revisione interattiva dei finding e salvataggio delle decisioni."""
+        from cto_audit.hitl.triage import FindingTriage, TriageStore
+
+        decisions = FindingTriage(console=self.console, input_fn=self._triage_input_fn).review(result)
+        if decisions:
+            store = TriageStore(self.target_path, labels_path=self._labels_path)
+            self.triage_files = store.save(result, decisions)
+            local, shared = self.triage_files
+            if local:
+                self.console.print(f"  Decisioni salvate in: {local}")
+            if shared:
+                self.console.print(f"  Etichette anonimizzate aggiunte a: {shared}")
+        return decisions
 
     def _run_remediation_pipeline(
         self,

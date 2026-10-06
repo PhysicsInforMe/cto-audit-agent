@@ -73,7 +73,7 @@ CTO Audit Agent non e un linter ne uno scanner di vulnerabilita. E un **auditor 
 
 | Metrica | Valore |
 |---------|--------|
-| **Test automatizzati** | 1.066 test (59 file) |
+| **Test automatizzati** | 1.079 test (60 file) |
 | **Repository validate** | 29 (20 reali + 9 sintetiche) |
 | **Precision/Recall sintetico** | 100% / 100% su 9 scenari |
 | **Score medio su 20 repo reali** | 78.3/100 (range: 56-94) |

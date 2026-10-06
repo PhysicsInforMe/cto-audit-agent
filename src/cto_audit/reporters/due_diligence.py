@@ -101,6 +101,7 @@ class DueDiligenceReporter:
             self._asset_inventory(result),
             self._flags(findings, (Severity.CRITICAL, Severity.HIGH), "Red flag", "Nessun red flag rilevato."),
             self._flags(findings, (Severity.MEDIUM,), "Yellow flag", "Nessun yellow flag rilevato."),
+            self._triage(result),
             self._claims(findings),
             self._remediation_cost(findings),
             self._management_questions(findings),
@@ -318,6 +319,26 @@ class DueDiligenceReporter:
                 lines.append("")
                 lines.append(f"**Effort stimato di remediation:** {kb.effort_range.min_hours}-{kb.effort_range.max_hours} ore ({kb.effort_range.t_shirt})")
                 lines.append("")
+        return "\n".join(lines)
+
+    def _triage(self, result: AuditResult) -> str:
+        if not result.triage:
+            return ""
+        labels = {"confirmed": "Confermato", "downgraded": "Declassato", "dismissed": "Scartato"}
+        lines = ["## 5.1 Revisione del consulente", ""]
+        counts = {k: sum(1 for d in result.triage if d.verdict.value == k) for k in labels}
+        lines.append(
+            f"{len(result.triage)} finding rivisti a mano: {counts['confirmed']} confermati, "
+            f"{counts['downgraded']} declassati, {counts['dismissed']} scartati. "
+            "Le decisioni non modificano lo score: indicano quali finding il revisore ritiene rilevanti "
+            "per questa operazione."
+        )
+        lines.append("")
+        lines.append("| Regola | Severita | Decisione | Nota |")
+        lines.append("|--------|----------|-----------|------|")
+        for d in result.triage:
+            lines.append(f"| {d.rule_id} | {d.severity} | {labels.get(d.verdict.value, d.verdict.value)} | {(d.note or '').replace('|', '/')} |")
+        lines.append("")
         return "\n".join(lines)
 
     def _claims(self, findings: list[Finding]) -> str:

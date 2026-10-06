@@ -177,6 +177,8 @@ Il profilo `due-diligence` pesa i layer per conseguenza sul deal, non per freque
 
 Il report di due diligence (`--due-diligence --output file.md`) e pensato per il lato acquirente e contiene: perimetro e limiti del metodo (cosa non si puo verificare dal codice), sintesi con **deal flag**, inventario dell'asset (stack, dimensioni, storico git, inventario licenze), red e yellow flag con il rischio per l'acquirente, dichiarazioni del README a confronto con le evidenze, costo stimato di remediation in ore (dalla knowledge base), **domande per il management** generate dai finding, compliance e evidence chain.
 
+**Triage dei finding (etichette).** In modalita due diligence, dopo lo scoring il tool mostra i finding critical/high/medium uno per uno e il revisore decide: conferma, declassa, scarta. Le decisioni non cambiano lo score. Vengono salvate in `.cto-audit/decisions.jsonl` nel repository analizzato (con titolo e nota) e, in forma anonimizzata, nella directory etichette del consulente (`CTO_AUDIT_LABELS_DIR`, default `~/.cto-audit/labels/`): solo rule_id, layer, severita, confidence, tipo progetto, linguaggi e dimensioni, mai percorsi, snippet o nome del cliente. Sono le etichette "oro" per lo stimatore locale previsto dal piano di lavoro. `--triage` lo attiva anche nel profilo default, `--no-triage` lo spegne; con `--auto-approve` non parte mai.
+
 I profili `default` e `vc-diligence` restano a 4 layer e producono gli stessi risultati di prima.
 
 ### Source Connectors
@@ -299,6 +301,7 @@ cto-audit scan <path | URL | archivio> [OPZIONI]
 | `--compliance-mode MODE` | Modalita compliance: cross-cutting, standalone, hybrid |
 | `--scoring PROFILE` | Profilo di scoring (default, vc-diligence, due-diligence) |
 | `--due-diligence`, `--dd` | Profilo `due-diligence` (6 layer), remediation pipeline, report di due diligence se `--output` e un `.md` |
+| `--triage`, `--no-triage` | Revisione interattiva dei finding con salvataggio delle decisioni come etichette (default: acceso in due diligence) |
 | `--offline` | Modalita offline: nessun accesso alla rete, nessuna domanda |
 | `--reuse-classification` | Riusa la classificazione privacy di un run precedente |
 | `--no-llm` | Disabilita integrazione LLM |
@@ -464,7 +467,7 @@ pip install -e ".[dev,ui]"
 pytest
 ```
 
-La suite di test comprende **1.066 test** distribuiti in 59 file, con 7 scenari end-to-end realistici e 3 scenari board report. I 43 test della dashboard richiedono l'extra `ui`.
+La suite di test comprende **1.079 test** distribuiti in 60 file, con 7 scenari end-to-end realistici e 3 scenari board report. I 43 test della dashboard richiedono l'extra `ui`.
 
 ## Documentazione
 

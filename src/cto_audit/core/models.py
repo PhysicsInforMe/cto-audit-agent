@@ -12,7 +12,7 @@ Contiene tutti i modelli Pydantic v2 usati dal sistema:
 
 from __future__ import annotations
 
-from datetime import datetime
+from datetime import datetime, timezone
 from enum import Enum
 from typing import Any
 
@@ -81,6 +81,13 @@ class ComplianceMode(str, Enum):
     CROSS_CUTTING = "cross-cutting"
     STANDALONE = "standalone"
     HYBRID = "hybrid"
+
+
+class TriageVerdict(str, Enum):
+    """Decisione del revisore su un finding (triage HITL)."""
+    CONFIRMED = "confirmed"      # rischio reale, resta
+    DOWNGRADED = "downgraded"    # vero ma meno grave di quanto la regola dica
+    DISMISSED = "dismissed"      # non rilevante in questo contesto
 
 
 # --- Modelli File ---
@@ -309,6 +316,26 @@ class AuditMetadata(BaseModel):
     )
 
 
+class TriageDecision(BaseModel):
+    """
+    Decisione del revisore su un singolo finding.
+
+    E un'etichetta per la revisione futura: non modifica lo score.
+    `title` e `note` restano solo nel file locale del repository analizzato,
+    non nella copia aggregata del consulente.
+    """
+    audit_id: str = Field(..., description="ID casuale della sessione di audit (non riconducibile al cliente)")
+    finding_id: str = Field(..., description="ID del finding nella sessione")
+    rule_id: str
+    layer: str
+    severity: str
+    finding_confidence: float = Field(default=1.0, ge=0.0, le=1.0)
+    verdict: TriageVerdict
+    note: str | None = None
+    title: str | None = None
+    decided_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+
+
 class GitSummary(BaseModel):
     """
     Riepilogo aggregato dello storico git, senza dati personali.
@@ -364,6 +391,10 @@ class AuditResult(BaseModel):
     dependency_licenses: list[dict[str, Any]] = Field(
         default_factory=list,
         description="Inventario licenze dipendenze (solo se layer provenance attivo)"
+    )
+    triage: list[TriageDecision] = Field(
+        default_factory=list,
+        description="Decisioni del revisore sui finding (triage HITL); non modificano lo score"
     )
 
 

@@ -43,11 +43,13 @@ Implementato in `collectors/epss.py` (query batch, solo ID CVE, degradazione gra
 
 Obiettivo: costruire il dataset che manca per qualsiasi stima di rischio appresa. Due sorgenti, con pesi diversi.
 
-### C1. Etichette oro: decisioni del revisore (HITL)
+### C1. Etichette oro: decisioni del revisore (HITL) — COMPLETATA 2026-10-06
 
 1. Nuovo passo opzionale `--triage` (attivo di default in modalita due diligence, disattivabile): dopo lo scoring, il tool mostra i finding critical/high/medium uno per uno e il revisore risponde `conferma`, `declassa`, `scarta`, con una nota facoltativa.
 2. Ogni decisione viene salvata in `.cto-audit/decisions.jsonl` dentro il repository analizzato, piu una copia aggregata e anonimizzata in una directory di lavoro del consulente (configurabile, es. `~/.cto-audit/labels/`): rule_id, layer, severita, tipo progetto, linguaggi, dimensioni, confidence del finding, decisione, data. Mai percorsi di file, mai snippet, mai nome del cliente.
 3. Lo score del report non cambia con il triage: le decisioni servono al dataset e a una sezione "Finding rivisti dal consulente" nel report di due diligence.
+
+Implementato in `hitl/triage.py` (`FindingTriage`, `TriageStore`), `core/models.py` (`TriageVerdict`, `TriageDecision`, `AuditResult.triage`), orchestrator (fase 7, mai con `--auto-approve`), CLI `--triage/--no-triage`, sezione 5.1 del report di due diligence. La copia anonimizzata esclude titolo, nota e ID del finding.
 
 ### C2. Etichette argento: LLM su repository open source
 

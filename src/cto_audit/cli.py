@@ -125,6 +125,16 @@ def scan(
         "--detailed",
         help="Report super-dettagliato con tutti i finding INFO e catena evidenze completa",
     ),
+    triage: Optional[bool] = typer.Option(
+        None,
+        "--triage/--no-triage",
+        help=(
+            "Revisione interattiva dei finding critical/high/medium (conferma, declassa, scarta): "
+            "le decisioni diventano etichette salvate in .cto-audit/decisions.jsonl e, anonimizzate, "
+            "nella directory etichette del consulente (env CTO_AUDIT_LABELS_DIR). "
+            "Attivo di default in modalita due diligence; mai con --auto-approve"
+        ),
+    ),
 ) -> None:
     """
     Scansiona un codebase e produce un audit report.
@@ -146,6 +156,11 @@ def scan(
         if scoring == "default":
             scoring = "due-diligence"
         board_report = True
+
+    # --- Triage: default acceso in due diligence, spento altrove; mai senza revisore ---
+    run_triage = due_diligence if triage is None else triage
+    if auto_approve:
+        run_triage = False
 
     # --- Tag → branch (alias) ---
     ref = branch or tag
@@ -265,6 +280,7 @@ def scan(
             no_llm=no_llm,
             compliance_profiles=compliance_profiles,
             previous_result=previous_result,
+            triage=run_triage,
         )
 
         result = orchestrator.run()

@@ -25,7 +25,7 @@ Descrive cosa fa ogni componente, le scelte implementative, e come i pezzi si co
 > **Agent Mode**: output JSON headless per container e CI/CD.
 > **Executable**: PyInstaller .exe con supporto `sys._MEIPASS` frozen mode.
 > **Due Diligence (Blocco 17)**: layer Provenance e Team, profilo `due-diligence` a 6 layer,
-> GitHistoryCollector, LicenseChecker, report lato acquirente. EPSS sulle CVE (Blocco 18). 1.066 test (59 file).
+> GitHistoryCollector, LicenseChecker, report lato acquirente. EPSS sulle CVE (Blocco 18), triage HITL dei finding (Blocco 19). 1.079 test (60 file).
 
 ---
 
@@ -1758,4 +1758,48 @@ riepilogo; `SecurityAnalyzer` con OSV ed EPSS mockati: ordinamento, testo, `extr
 report DD con riga EPSS e ordinamento.
 
 Fonte: https://www.first.org/epss/ e documentazione API https://api.first.org/epss/ (lette il 2026-10-06).
+
+---
+
+## Blocco 19 — Triage HITL dei finding (etichette oro)
+
+### Cosa e stato fatto
+
+Il revisore ora puo dire la sua su ogni finding, e quel giudizio viene conservato.
+E il primo passo della fase C del piano: senza etichette non esiste uno stimatore
+di rischio appreso, e le etichette che contano sono le decisioni di chi firma il report.
+
+### `core/models.py`
+
+- `TriageVerdict`: `confirmed`, `downgraded`, `dismissed`.
+- `TriageDecision`: audit_id casuale, finding_id, rule_id, layer, severita, confidence del
+  finding, verdetto, nota, titolo, timestamp.
+- `AuditResult.triage`: lista delle decisioni. Lo score non la legge.
+
+### `hitl/triage.py`
+
+- `FindingTriage.review(result)`: mostra i finding critical/high/medium ordinati per severita,
+  chiede `c/d/s/k/q` e una nota facoltativa. EOF o interruzione terminano senza errore.
+- `TriageStore.save(result, decisions)`: due file in append.
+  - `.cto-audit/decisions.jsonl` nel repository analizzato: riga completa (titolo e nota inclusi).
+  - `CTO_AUDIT_LABELS_DIR/decisions.jsonl` (default `~/.cto-audit/labels/`): riga anonimizzata,
+    senza titolo, nota e finding_id. Contesto strutturato: tipo progetto e confidence, linguaggio
+    primario e percentuali, numero framework, file, LOC, score, profilo, versione del tool.
+
+### Orchestrator e CLI
+
+- Fase 7 dopo la remediation pipeline: `if self.triage and not self.auto_approve`.
+  `triage_input_fn` e `labels_path` sono iniettabili per i test.
+- CLI: `--triage/--no-triage`, default acceso con `--due-diligence`, spento altrimenti, forzato
+  spento con `--auto-approve` (nessun revisore).
+
+### Report di due diligence
+
+Sezione 5.1 "Revisione del consulente": conteggi e tabella regola / severita / decisione / nota.
+
+### Test — `test_triage.py`
+
+Sessione con input scriptato (conferma, declassa, scarta, salta, termina, risposta non valida),
+store con directory etichette temporanea (assenza di titolo, nota, percorsi nella copia
+anonimizzata), orchestrator con `triage=True` e con `auto_approve=True`, flag CLI, sezione nel report.
 
