@@ -1,16 +1,21 @@
-# CTO Audit Agent v0.1.0
+# CTO Audit Agent v0.2.0
 
 Audita codebase come farebbe un CTO esperto: infrastruttura, architettura, sicurezza e qualita del codice. Ogni punteggio e tracciabile fino alla letteratura scientifica e normativa di riferimento.
 
 ## Cos'e
 
-CTO Audit Agent e uno strumento da riga di comando scritto in Python che analizza codebase in 13+ linguaggi dal punto di vista di un CTO, non di uno sviluppatore. A differenza di strumenti come SonarQube:
+CTO Audit Agent e uno strumento professionale scritto in Python che analizza codebase in 13+ linguaggi dal punto di vista di un CTO, non di uno sviluppatore. A differenza di strumenti come SonarQube:
 
 - **Prospettiva executive**: scoring orientato al rischio business, non solo difetti nel codice
 - **Scoring tracciabile**: ogni punto e riconducibile a finding, regola, peso e fonte bibliografica
 - **Profili di compliance**: NIS2 e GDPR integrati
 - **Privacy by design**: gate HITL (Human-In-The-Loop) con 4 categorie di privacy (SAFE, LOCAL_LLM, SENSITIVE, EXCLUDED)
 - **Pipeline di remediation**: stima del rischio business e dello sforzo di correzione
+- **Dashboard interattiva**: UI dark "intelligence style" con Dash + Plotly per navigare i risultati
+- **Multi-source**: audit di repo locali, GitHub, GitLab, Azure DevOps, Bitbucket, archivi ZIP/tar.gz
+- **Multi-repo**: aggregazione score su N repository con media pesata per LOC
+- **Agent mode**: output JSON headless per container e CI/CD
+- **Eseguibile standalone**: .exe/.app — doppio click, si apre la dashboard, zero Python
 - **Funziona offline**: nessuna dipendenza cloud, nessun server da configurare
 - **Installazione immediata**: `pip install` e scansione, senza configurare server
 
@@ -32,6 +37,8 @@ Extras opzionali:
 pip install -e ".[nlp]"          # Project type detection avanzata (Sentence-BERT)
 pip install -e ".[pdf]"          # Export report in PDF
 pip install -e ".[llm-local]"    # Integrazione Ollama
+pip install -e ".[ui]"           # Dashboard interattiva (Dash + Plotly)
+pip install -e ".[build]"        # Build eseguibile standalone (PyInstaller)
 ```
 
 ## Quick Start
@@ -47,6 +54,18 @@ cto-audit scan /path/to/codebase --detailed -o report.md
 
 # Modalita offline (senza LLM)
 cto-audit scan /path/to/codebase --offline
+
+# Scan di un repo GitHub remoto
+cto-audit scan https://github.com/owner/repo --token ghp_xxxxx
+
+# Dashboard interattiva (richiede: pip install cto-audit[ui])
+cto-audit ui
+
+# Agent mode — output JSON per CI/CD o container
+cto-audit agent /path/to/codebase -o report.json --offline
+
+# Multi-repo — audit aggregato da config YAML
+cto-audit project project.yml -o aggregated.json
 ```
 
 ## Funzionalita
@@ -114,6 +133,86 @@ Rileva automaticamente il tipo di progetto (web app, frontend, library, CLI tool
 
 Ogni layer score include una **confidence** (0%-100%) che indica quanto il tool e sicuro del punteggio. Tiene conto della coverage delle regole e del tipo di progetto: le regole non applicabili (es. SEC-AUTH-001 su una libreria) vengono escluse dal calcolo.
 
+### Source Connectors
+
+Il tool analizza codice da sorgenti diverse, non solo directory locali. Il tipo di sorgente viene rilevato automaticamente dall'input e si puo forzare con `--source-type`.
+
+| Sorgente | Esempio | Auto-detect |
+|---|---|---|
+| **Locale** | `cto-audit scan /path/to/repo` | Default |
+| **GitHub** | `cto-audit scan https://github.com/owner/repo` | `github.com` nell'URL |
+| **GitLab** | `cto-audit scan https://gitlab.com/owner/repo` | `gitlab.com` nell'URL |
+| **Azure DevOps** | `cto-audit scan https://dev.azure.com/org/project/_git/repo` | `dev.azure.com` nell'URL |
+| **Bitbucket** | `cto-audit scan https://bitbucket.org/owner/repo` | `bitbucket.org` nell'URL |
+| **Archivio** | `cto-audit scan /path/to/code.zip` | Estensione `.zip`/`.tar.gz` |
+
+Per i repository privati usa `--token` o la variabile d'ambiente `CTO_AUDIT_TOKEN`; il token serve solo per il clone e non viene mai loggato o persistito. `--branch` (o `--tag`) seleziona branch o tag da clonare. Le sorgenti remote fanno un clone shallow (`--depth 1`) in una directory temporanea, che viene rimossa al termine. Requisito: `git` installato e nel PATH.
+
+### Multi-Source (Progetto Multi-Repo)
+
+Per scenari di consulenza con N repository (es. 15 microservizi), un file YAML definisce le sorgenti e il tool le analizza aggregando lo score con una **media pesata per LOC**: un repository con 50.000 LOC pesa 10 volte uno con 5.000.
+
+```yaml
+# project.yml
+name: "Acme Platform"
+sources:
+  - name: "backend-api"
+    source_type: "github"
+    path_or_url: "https://github.com/acme/api"
+    token_env: "GITHUB_TOKEN"     # legge il token da questa env var
+    branch: "main"
+  - name: "frontend"
+    source_type: "local"
+    path_or_url: "/path/to/frontend"
+  - name: "shared-libs"
+    source_type: "zip"
+    path_or_url: "/path/to/libs.zip"
+```
+
+```bash
+cto-audit project project.yml -o aggregated.json
+```
+
+Il JSON contiene `aggregated_score`, `source_results` per ogni sorgente, `aggregated_layer_scores`, `total_loc` e `failed_sources` (se una sorgente fallisce, le altre continuano).
+
+### Dashboard Interattiva
+
+UI dark "intelligence style" (Dash + Plotly + dash-bootstrap-components) con 8 sezioni: Overview (gauge health score, card layer, stack, maturity), Layers (tab per layer con finding ed evidence chain), Findings (tabella filtrabile), Remediation (azioni prioritarie, what-if), Compliance (ring chart NIS2/GDPR), History (trend score e delta), Source Picker (avvia un audit dalla UI) e Project View (multi-repo).
+
+```bash
+pip install cto-audit[ui]
+cto-audit ui                # apre il browser automaticamente
+cto-audit ui --port 9000    # porta personalizzata
+cto-audit ui --no-browser   # utile in container
+```
+
+### Agent Mode e Container
+
+Il comando `agent` produce solo JSON: auto-approve implicito, log su stderr, exit code 0 su successo e 1 su errore. Pensato per CI/CD e container.
+
+```bash
+# Agent mode — JSON su stdout o file
+cto-audit agent /path/to/repo -o report.json --offline
+cto-audit agent /path/to/repo --offline | jq '.health_score.overall_score'
+
+# Container Docker
+docker build -t cto-audit .
+docker run -v /code:/audit:ro -v /out:/output cto-audit agent /audit -o /output/report.json
+docker run -p 8050:8050 cto-audit ui --port 8050 --no-browser
+```
+
+Il codice e montato read-only e solo il report JSON esce dal container. `docker-compose.yml` definisce i due servizi `agent` e `dashboard`.
+
+### Eseguibile Standalone
+
+Per l'utente non tecnico: scarica l'eseguibile, doppio click, si apre la dashboard nel browser. Zero Python, zero pip, zero terminale. L'eseguibile include dashboard, profili YAML e asset; `git` va installato a parte per le sorgenti remote.
+
+```bash
+pip install cto-audit[build]
+python scripts/build_exe.py
+# → dist/cto-audit.exe (Windows) o dist/cto-audit (macOS/Linux)
+```
+
 ### Funzionalita aggiuntive
 
 - **Check Docker context-aware**: librerie e tool CLI non vengono penalizzati per l'assenza di Docker
@@ -136,23 +235,48 @@ Ogni layer score include una **confidence** (0%-100%) che indica quanto il tool 
 - `--offline` = nessuna rete senza domande (backward compatible)
 - `--auto-approve` = consenso implicito
 
-## Opzioni CLI
+## Comandi e Opzioni CLI
+
+### `cto-audit scan` — Audit singolo
 
 ```
-cto-audit scan /path/to/codebase [OPZIONI]
+cto-audit scan <path | URL | archivio> [OPZIONI]
 ```
 
 | Flag | Descrizione |
 |---|---|
+| `--source-type TYPE` | Forza il tipo di sorgente: auto, local, github, gitlab, azure-devops, bitbucket, zip |
+| `--token TOKEN` | Token per repository private (o env var `CTO_AUDIT_TOKEN`) |
+| `--branch REF`, `--tag REF` | Branch o tag da clonare per sorgenti remote |
 | `--focus LAYER` | Analizza un singolo layer (security, architecture, infra, quality) |
 | `--compliance PROFILES` | Attiva profili di compliance (nis2, gdpr) |
+| `--compliance-mode MODE` | Modalita compliance: cross-cutting, standalone, hybrid |
 | `--scoring PROFILE` | Profilo di scoring (default, vc-diligence) |
 | `--offline` | Modalita offline: nessun accesso alla rete, nessuna domanda |
+| `--reuse-classification` | Riusa la classificazione privacy di un run precedente |
 | `--no-llm` | Disabilita integrazione LLM |
 | `--board-report` | Genera report per il management |
 | `--detailed` | Report completo con tutti i finding |
 | `--auto-approve` | Approva automaticamente il gate HITL |
 | `-o, --output FILE` | File di output (.md, .html, .json, .pdf) |
+
+### `cto-audit project` — Audit multi-repo
+
+```
+cto-audit project config.yml [--scoring PROFILE] [--offline] [--auto-approve] [-o output.json]
+```
+
+### `cto-audit agent` — Headless JSON
+
+```
+cto-audit agent <path | URL> [-o output.json] [--scoring PROFILE] [--offline] [--source-type TYPE] [--token TOKEN] [--branch REF]
+```
+
+### `cto-audit ui` — Dashboard
+
+```
+cto-audit ui [--port 8050] [--no-browser] [--debug]
+```
 
 ## Esempi d'uso
 
@@ -186,6 +310,33 @@ cto-audit scan /path/to/codebase -o report.html
 
 # Report PDF (richiede: pip install cto-audit[pdf])
 cto-audit scan /path/to/codebase -o report.pdf
+
+# Scan repo GitHub
+cto-audit scan https://github.com/owner/repo
+
+# Scan repo GitLab privato
+cto-audit scan https://gitlab.com/owner/repo --token glpat_xxxxx
+
+# Scan repo Azure DevOps
+cto-audit scan https://dev.azure.com/org/project/_git/repo --token xxxxx
+
+# Scan da archivio ZIP
+cto-audit scan /path/to/code.zip
+
+# Scan con branch specifico
+cto-audit scan https://github.com/owner/repo --branch develop
+
+# Multi-repo
+cto-audit project project.yml --offline -o audit-acme.json
+
+# Agent mode (CI/CD, container)
+cto-audit agent /path/to/codebase -o report.json --offline
+
+# Dashboard interattiva
+cto-audit ui --port 8050
+
+# Container Docker
+docker run -v /cliente/codice:/audit:ro -v ./out:/output cto-audit agent /audit -o /output/report.json
 ```
 
 ## Architettura
@@ -194,7 +345,7 @@ cto-audit scan /path/to/codebase -o report.pdf
 
 ```mermaid
 flowchart TD
-    CLI["cto-audit scan"] --> Source["AuditSource\n(LocalRepoSource)"]
+    CLI["cto-audit scan | project | agent | ui"] --> Source["AuditSource\n(Local, GitHub, GitLab, Azure, Bitbucket, Archive)"]
     Source --> Scan["FileScanner\n+ StackDetector"]
     Scan --> Privacy["PrivacyClassifier"]
     Privacy --> HITL{{"HITL Gate\n(4 categorie)"}}
@@ -224,6 +375,7 @@ flowchart TD
         PDF["PDF"]
         JSON["JSON"]
         Board["Board Report"]
+        Dash["Dashboard"]
     end
 ```
 
@@ -256,11 +408,11 @@ pie title Pesi Layer — Profilo Default
 ```bash
 git clone https://github.com/PhysicsInforMe/cto-audit-agent.git
 cd cto-audit-agent
-pip install -e ".[dev]"
+pip install -e ".[dev,ui]"
 pytest
 ```
 
-La suite di test comprende **733 test** distribuiti in 31 file, con 7 scenari end-to-end realistici.
+La suite di test comprende **932 test** distribuiti in 52 file, con 7 scenari end-to-end realistici e 3 scenari board report. I test della dashboard richiedono l'extra `ui`.
 
 ## Documentazione
 
@@ -268,6 +420,7 @@ La suite di test comprende **733 test** distribuiti in 31 file, con 7 scenari en
 - **[User Guide](docs/USER_GUIDE.md)**: guida completa per interpretare i risultati, personalizzare i profili e scenari d'uso
 - **[Tester Guide](docs/TESTER_GUIDE.md)**: come testare e validare il tool
 - **[Validation Methodology](docs/VALIDATION_METHODOLOGY.md)**: metodologia di validazione
+- **[Architecture](ARCHITECTURE.md)**: documentazione del codice blocco per blocco
 
 ## Validazione
 

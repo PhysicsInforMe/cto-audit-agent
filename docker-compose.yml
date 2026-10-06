@@ -1,0 +1,17 @@
+version: "3.8"
+
+services:
+  # Agent mode — audit headless con output JSON
+  agent:
+    build: .
+    volumes:
+      - ./test-repo:/audit:ro       # Codice sorgente (read-only)
+      - ./output:/output             # Output report
+    command: agent /audit -o /output/report.json
+
+  # Dashboard mode — UI interattiva
+  dashboard:
+    build: .
+    ports:
+      - "8050:8050"
+    command: ui --port 8050 --no-browser

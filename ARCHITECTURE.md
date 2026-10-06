@@ -1,10 +1,10 @@
 # CTO Audit Agent — Documentazione Codice
-# v8.0 — Defensible Scoring + Full Benchmark Validation
+# v9.0 — Dashboard + Source Connectors + Multi-Source + Agent Mode + Executable
 
 Documento aggiornato progressivamente blocco per blocco.
 Descrive cosa fa ogni componente, le scelte implementative, e come i pezzi si collegano.
 
-> **Stato**: 733 test, 31 test files, 7 scenari realistici + 3 scenari board report.
+> **Stato**: 932 test, 52 test files, 7 scenari E2E + 3 scenari board report.
 > Validato su **29 repo** (20 reali, media 78.3/100 + 9 sintetiche, 100% precision/recall).
 > Tutti e 4 gli analyzer implementati: Infra (10), Architecture (7), Security (9), Quality (10).
 > Compliance engine implementato (NIS2, GDPR).
@@ -18,6 +18,12 @@ Descrive cosa fa ogni componente, le scelte implementative, e come i pezzi si co
 > **Audit History**: salvataggio automatico in `.cto-audit/history/`, delta tra audit,
 > visualizzazione in tutti i reporter. **Network Consent**: pannello HITL pre-CVE check.
 > **Delta Narrative**: LLM opzionale per narrativa evoluzione progetto.
+> **Source Connectors**: GitHub, GitLab, Azure DevOps, Bitbucket, Archive (ZIP/tar.gz).
+> **Multi-Source**: aggregazione score su N repo con media pesata per LOC.
+> **Dashboard**: UI dark Dash + Plotly con 8 componenti (overview, layers, findings,
+> remediation, compliance, history, source picker, project view).
+> **Agent Mode**: output JSON headless per container e CI/CD.
+> **Executable**: PyInstaller .exe con supporto `sys._MEIPASS` frozen mode.
 
 ---
 
@@ -44,13 +50,19 @@ cto-audit/
 │   │   └── orchestrator.py         # Coordinamento flusso — Blocco 10
 │   │
 │   ├── sources/                    # Implementazioni AuditSource
+│   │   ├── __init__.py             # Export di tutte le classi
 │   │   ├── local.py                # LocalRepoSource (MVP) — Blocco 2
-│   │   └── git.py                  # GitRemoteSource (futuro)
+│   │   ├── base.py                 # TempDirSourceMixin — context manager per temp dir
+│   │   ├── github.py               # GitHubSource — clone via git, supporto PAT
+│   │   ├── gitlab.py               # GitLabSource — cloud e self-hosted
+│   │   ├── azure_devops.py         # AzureDevOpsSource — URL format Azure DevOps
+│   │   ├── bitbucket.py            # BitbucketSource — cloud e server
+│   │   ├── archive.py              # ArchiveSource — ZIP/tar.gz, stdlib only
+│   │   └── factory.py              # SourceFactory — auto-detection e routing
 │   │
 │   ├── collectors/                 # Raccolta dati dal codebase
 │   │   ├── scanner.py              # FileScanner — Blocco 3
 │   │   ├── stack.py                # StackDetector — Blocco 3
-│   │   ├── dependencies.py         # Analisi dipendenze (futuro)
 │   │   └── privacy.py              # PrivacyClassifier — Blocco 4
 │   │
 │   ├── hitl/                       # Human-in-the-Loop
@@ -72,8 +84,7 @@ cto-audit/
 │   ├── compliance/                 # Compliance engine modulare [IMPLEMENTATO]
 │   │   ├── engine.py               # ComplianceEngine — mapping finding→requisiti normativi
 │   │   ├── profile.py              # Caricamento profili YAML (NIS2, GDPR)
-│   │   ├── models.py               # Modelli compliance (ComplianceResult, RequirementStatus)
-│   │   └── modes.py                # Modalità cross-cut/standalone/hybrid
+│   │   └── models.py               # Modelli compliance (ComplianceResult, RequirementStatus)
 │   │
 │   ├── remediation/                # Remediation Pipeline [IMPLEMENTATO]
 │   │   ├── models.py               # EffortRange, RemediationEntry, WhatIfResult, RemediationPipelineResult
@@ -89,9 +100,31 @@ cto-audit/
 │   │   ├── provider.py             # LLMProvider Protocol + LLMConfig + LLMResponse
 │   │   ├── local.py                # OllamaProvider — Ollama via httpx /api/generate
 │   │   ├── router.py               # LLMRouter — fallback tra provider
-│   │   ├── agent.py                # InterpretationAgent — genera executive summary
-│   │   ├── claude.py               # Claude API (futuro, allow_paid)
-│   │   └── gemini.py               # Gemini API (futuro, allow_paid)
+│   │   └── agent.py                # InterpretationAgent — genera executive summary
+│   │
+│   ├── core/
+│   │   ├── project.py              # Modelli multi-source (ProjectConfig, AggregatedResult)
+│   │   └── project_orchestrator.py # ProjectOrchestrator — audit multi-repo con aggregazione
+│   │
+│   ├── dashboard/                  # Dashboard UI (Dash + Plotly) [IMPLEMENTATO]
+│   │   ├── __init__.py
+│   │   ├── app.py                  # Dash app factory, create_app()
+│   │   ├── layout.py               # Layout con sidebar navigation + dcc.Store
+│   │   ├── theme.py                # Tema CYBORG + CSS dark (#0d1117, accenti neon)
+│   │   ├── callbacks.py            # Callback: scan trigger, navigation, filtri
+│   │   └── components/
+│   │       ├── __init__.py
+│   │       ├── overview.py         # Gauge health score, card layer, stack badges
+│   │       ├── layers.py           # Tab per layer, findings, evidence chain
+│   │       ├── findings.py         # DataTable filtrabile per severity/layer
+│   │       ├── remediation.py      # Priority actions, what-if slider
+│   │       ├── compliance.py       # Ring chart NIS2/GDPR, progress
+│   │       ├── history.py          # Line chart trend, delta finding
+│   │       ├── source_picker.py    # Dropdown sorgente, campi condizionali
+│   │       └── project_view.py     # Vista multi-repo, score aggregato
+│   │
+│   ├── _data.py                    # Risoluzione data dir (dev/frozen/installed)
+│   ├── exe_entry.py                # Entry point PyInstaller: dashboard + browser
 │   │
 │   └── reporters/                  # Generazione report
 │       ├── terminal.py             # Output Rich — Blocco 10
@@ -99,14 +132,42 @@ cto-audit/
 │       ├── board.py                # Board Report deterministico [IMPLEMENTATO]
 │       ├── html.py                 # Report HTML self-contained
 │       ├── json_export.py          # Report JSON export
-│       ├── comparison.py           # Report comparison (diff tra audit)
-│       └── pdf.py                  # Report PDF (futuro)
+│       ├── comparison.py           # Report comparison (planned)
+│       └── pdf.py                  # Report PDF (planned)
+│
+├── Dockerfile                      # Immagine Docker (python:3.12-slim)
+├── docker-compose.yml              # Agent + Dashboard services
+├── cto-audit.spec                  # PyInstaller spec file
+├── scripts/
+│   └── build_exe.py                # Script build eseguibile
 │
 ├── remediation-kb/                 # Knowledge Base remediation [IMPLEMENTATO]
 │   └── default.yml                 # 31 entry, 1 per regola penalizzante
 │
-└── tests/
+└── tests/                          # 932 test in 52 file
     ├── test_models.py              # Test modelli Pydantic
+    ├── test_source_base.py         # Test TempDirSourceMixin
+    ├── test_source_github.py       # Test GitHubSource
+    ├── test_source_gitlab.py       # Test GitLabSource
+    ├── test_source_azure_devops.py # Test AzureDevOpsSource
+    ├── test_source_bitbucket.py    # Test BitbucketSource
+    ├── test_source_archive.py      # Test ArchiveSource
+    ├── test_source_factory.py      # Test SourceFactory
+    ├── test_source_integration.py  # Test source → orchestrator
+    ├── test_cli_sources_integration.py # Test CLI + sources
+    ├── test_project_models.py      # Test ProjectConfig, AggregatedResult
+    ├── test_project_orchestrator.py # Test ProjectOrchestrator
+    ├── test_project_integration.py # Test multi-repo E2E
+    ├── test_dashboard_theme.py     # Test tema e colori
+    ├── test_dashboard_components.py # Test componenti Dash
+    ├── test_dashboard_callbacks.py # Test callback
+    ├── test_dashboard_app_integration.py # Test app factory
+    ├── test_exe_entry.py           # Test entry point exe
+    ├── test_data_frozen.py         # Test _data.py frozen mode
+    ├── test_exe_integration.py     # Test exe import chain
+    ├── test_agent_mode.py          # Test comando agent
+    ├── test_agent_integration.py   # Test agent E2E
+    ├── test_e2e_full_product.py    # Suite E2E completa (7 scenari)
     ├── test_remediation_kb.py      # Test KB + cross-validazione
     ├── test_whatif.py              # Test What-If Simulator
     ├── test_context.py             # Test Context Collector
@@ -178,7 +239,7 @@ Ogni opzione CLI corrisponde a un campo.
 | Campo | Default | Descrizione |
 |-------|---------|-------------|
 | `target_path` | (obbligatorio) | Percorso del codebase — validato: deve esistere ed essere directory |
-| `output_format` | `"terminal"` | Formato output: terminal, markdown, html, pdf, json |
+| `output_format` | `"terminal"` | Formato output: terminal, markdown, html, json |
 | `output_path` | `None` | Percorso file output (se non terminale) |
 | `scoring_profile` | `"default"` | Profilo scoring YAML da usare |
 | `compliance_profiles` | `[]` | Profili compliance attivi (es. `["nis2", "gdpr"]`) |
@@ -972,7 +1033,7 @@ con HealthScore 100/100 e nessun finding.
 | `--no-llm` | Disabilita LLM (board report deterministico) |
 | `--output FILE` | Salva report su file (Markdown, HTML, JSON) |
 
-**Reporter disponibili**: TerminalReporter, MarkdownReporter, BoardReporter, HTMLReporter (self-contained), JSONExporter, ComparisonReporter.
+**Reporter disponibili**: TerminalReporter, MarkdownReporter, BoardReporter, HTMLReporter (self-contained), JSONExporter.
 
 ### `reporters/terminal.py` — TerminalReporter
 
@@ -1241,9 +1302,262 @@ flowchart TD
 - `test_llm_agent.py`: 8 test (LLM, fallback, HITL accept/reject, prompt building)
 - `test_integration_remediation.py`: 10 test (pipeline E2E, orchestrator, scenari board)
 - **Totale nuovi test: 107** (fase remediation/LLM, da 394 a 501)
-- **Totale complessivo progetto: 733 test** (31 test files)
 
 > **Nota**: Security e Quality analyzer implementati con test dedicati.
 > Compliance engine (NIS2, GDPR) implementato con profili YAML e test.
 > Scoring profiles: default + vc-diligence, entrambi con citation dalla letteratura.
 > Benchmark: 20 repo reali (media 78.3/100) + 9 sintetiche (100% precision/recall).
+
+---
+
+## Blocco 11 — Source Connectors
+
+### Cosa e stato fatto
+
+Implementati 6 source connector per analizzare codice da qualsiasi sorgente. Tutti seguono lo stesso pattern: **clone in temp dir → wrappa in LocalRepoSource → delega i 3 metodi Protocol**.
+
+### `sources/base.py` — TempDirSourceMixin
+
+Context manager che gestisce il ciclo di vita della directory temporanea:
+- `__enter__`: crea temp dir, chiama `_materialize()` (abstract), wrappa in `LocalRepoSource`
+- `__exit__`: rimuove temp dir con `shutil.rmtree(ignore_errors=True)`
+- Se `_materialize()` fallisce, cleanup immediato in `__enter__` (non serve `__exit__`)
+- Delega `get_file_tree()`, `read_file()`, `get_metadata()` al `LocalRepoSource` interno
+
+### Source Connectors
+
+| Classe | File | URL Auth Format | Note |
+|--------|------|----------------|------|
+| `GitHubSource` | `github.py` | `{token}@github.com/...` | Verifica `git` su PATH |
+| `GitLabSource` | `gitlab.py` | `oauth2:{token}@gitlab.com/...` | Cloud e self-hosted |
+| `AzureDevOpsSource` | `azure_devops.py` | `{token}@dev.azure.com/...` | URL format Azure |
+| `BitbucketSource` | `bitbucket.py` | `x-token-auth:{token}@` (cloud), `{token}@` (server) | Flag `server=True` |
+| `ArchiveSource` | `archive.py` | N/A | `zipfile`/`tarfile` stdlib, path traversal protection |
+
+Tutti usano `--depth 1` (shallow clone) e supportano branch/tag selection.
+
+### `sources/factory.py` — SourceFactory
+
+Factory con auto-detection dal formato dell'input:
+- `github.com` → `GitHubSource`
+- `gitlab.com` → `GitLabSource`
+- `dev.azure.com` / `visualstudio.com` → `AzureDevOpsSource`
+- `bitbucket.org` → `BitbucketSource`
+- `.zip`, `.tar.gz`, `.tgz`, `.tar.bz2` → `ArchiveSource`
+- Default → `LocalRepoSource`
+
+### Test — 91 test
+
+- `test_source_base.py` (9): context manager, cleanup, materialize failure
+- `test_source_github.py` (13): clone args, shallow, branch, tag, token URL rewriting
+- `test_source_gitlab.py` (8): URL format `oauth2:{token}@`
+- `test_source_azure_devops.py` (8): URL format Azure DevOps
+- `test_source_bitbucket.py` (6): cloud e server URL format
+- `test_source_archive.py` (10): ZIP/tar.gz reali, estrazione, cleanup
+- `test_source_factory.py` (22): routing per tipo, auto-detection, parametri
+- `test_source_integration.py` (14): source → FileScanner → StackDetector E2E
+- `test_cli_sources_integration.py` (10): CLI + source factory E2E
+
+---
+
+## Blocco 12 — Multi-Source Aggregation
+
+### Cosa e stato fatto
+
+Supporto per audit aggregati su N repository (scenari consulenza: 15 microservizi in 15 repo).
+
+### `core/project.py` — Modelli Pydantic
+
+| Modello | Scopo |
+|---------|-------|
+| `ProjectSourceConfig` | Configurazione singola sorgente (name, source_type, path_or_url, token_env, branch) |
+| `ProjectConfig` | Configurazione progetto (name, sources[]) — parsata da YAML |
+| `SourceResult` | Risultato singola sorgente (name, audit_result, loc, error) |
+| `AggregatedResult` | Score aggregato con media pesata per LOC, breakdown per repo |
+
+### `core/project_orchestrator.py` — ProjectOrchestrator
+
+- Itera le sorgenti dalla `ProjectConfig`
+- Per ciascuna: crea source via `SourceFactory`, esegue `AuditOrchestrator`, raccoglie risultato
+- Aggregazione: `score_aggregato = sum(score_i * loc_i) / sum(loc_i)`
+- Error handling: se una sorgente fallisce, le altre continuano — errori in `failed_sources`
+- Token letti da env var (`token_env` nel YAML config)
+
+### CLI `project` command
+
+```
+cto-audit project config.yml [--offline] [-o output.json]
+```
+
+### Test — 18 test
+
+- `test_project_models.py` (9): validazione Pydantic, serializzazione YAML
+- `test_project_orchestrator.py` (5): aggregazione, error handling, media pesata
+- `test_project_integration.py` (4): YAML → orchestrator → risultato E2E
+
+---
+
+## Blocco 13 — Dashboard UI
+
+### Cosa e stato fatto
+
+Dashboard interattiva dark "intelligence style" costruita con Dash + Plotly + dash-bootstrap-components.
+
+### Architettura Dashboard
+
+```
+create_app() → Dash app
+  ├── layout.py → sidebar navigation + content area + 4 dcc.Store
+  ├── callbacks.py → URL routing, scan trigger, deserializzazione
+  └── components/ → 8 componenti modulari
+```
+
+### Tema (`theme.py`)
+
+- Base: `dbc.themes.CYBORG` (dark bootstrap)
+- Sfondo: `#0d1117` (GitHub dark)
+- Accenti: `#00ff41` (verde hacker), `#ff3333` (critical), `#f0b400` (warning)
+- `score_color(score)`: restituisce il colore in base alla soglia (75+/50+/25+/sotto)
+- CSS custom con `@media print` per stampa
+
+### Componenti
+
+| Componente | File | Cosa fa |
+|-----------|------|---------|
+| Overview | `overview.py` | Gauge health score (`plotly.Indicator`), card layer, stack badges, maturity |
+| Layers | `layers.py` | Tab per layer, findings list, evidence chain table |
+| Findings | `findings.py` | `DataTable` filtrabile/ordinabile per severity, layer, rule_id |
+| Remediation | `remediation.py` | Executive summary card, what-if slider |
+| Compliance | `compliance.py` | Ring chart (`plotly.Pie` con hole), compliance card |
+| History | `history.py` | Delta score, finding nuovi/risolti |
+| Source Picker | `source_picker.py` | Dropdown tipo sorgente, campi condizionali, bottone "Avvia Audit" |
+| Project View | `project_view.py` | Score aggregato multi-repo, bar chart per repo |
+
+### Flusso operativo
+
+1. Utente apre la dashboard (`cto-audit ui` o doppio click su exe)
+2. Source picker: seleziona tipo sorgente, compila campi, clicca "Avvia Audit"
+3. Callback `_run_audit()` esegue scan con `AuditOrchestrator`
+4. Risultato salvato in `dcc.Store` (JSON serializzato da Pydantic)
+5. Navigazione tra le tab per esplorare risultati
+
+### Test — 43 test
+
+- `test_dashboard_theme.py` (11): colori, soglie, CSS
+- `test_dashboard_components.py` (17): ogni componente con dati mock
+- `test_dashboard_callbacks.py` (6): logica callback isolata
+- `test_dashboard_app_integration.py` (9): app factory, layout, store
+
+---
+
+## Blocco 14 — Executable Standalone + Frozen Mode
+
+### Cosa e stato fatto
+
+Supporto per build eseguibile standalone (.exe/.app) con PyInstaller.
+
+### `exe_entry.py` — Entry point
+
+```python
+def main(port=8050):
+    app = create_app(title="CTO Audit Agent")
+    threading.Timer(1.5, lambda: webbrowser.open(f"http://localhost:{port}")).start()
+    app.run(host="127.0.0.1", port=port, debug=False)
+```
+
+### `_data.py` — Risoluzione data directory
+
+Cerca le directory dati (scoring-profiles, remediation-kb, compliance-profiles) in 3 percorsi:
+1. **Frozen mode**: `sys._MEIPASS / subdir` (PyInstaller)
+2. **Installed mode**: `importlib.resources`
+3. **Dev mode**: risale dal file fino alla root del repo
+
+### `cto-audit.spec` — PyInstaller spec
+
+- `console=False` — nessuna finestra terminale
+- `collect_data_files('dash')`, `collect_data_files('plotly')`, `collect_data_files('dash_bootstrap_components')`
+- Include YAML data dirs via `datas`
+- Hidden imports per tutti i moduli dinamici
+
+### Test — 11 test
+
+- `test_exe_entry.py` (2): `main()` crea app e chiama `app.run`
+- `test_data_frozen.py` (3): `sys._MEIPASS` mockato, fallback
+- `test_exe_integration.py` (6): import chain completa, YAML data trovati
+
+---
+
+## Blocco 15 — Agent Mode + Container
+
+### Cosa e stato fatto
+
+Comando `agent` per output JSON headless + Dockerfile per deployment containerizzato.
+
+### CLI `agent` command
+
+```
+cto-audit agent <target> [-o output.json] [--offline]
+```
+
+- Auto-approve implicito (non chiede conferma)
+- JSON su stdout (default) o file (`-o`)
+- Log su stderr (non inquina stdout)
+- Exit code 0 su successo, 1 su errore
+
+### Dockerfile
+
+- Base: `python:3.12-slim`
+- Installa `git` per clone remoti
+- Utente non-root (`ctoaudit`)
+- `EXPOSE 8050` per dashboard mode
+
+### docker-compose.yml
+
+```yaml
+services:
+  agent:   # Audit headless con output JSON
+    volumes: [./test-repo:/audit:ro, ./output:/output]
+    command: agent /audit -o /output/report.json
+  dashboard:   # UI interattiva
+    ports: ["8050:8050"]
+    command: ui --port 8050 --no-browser
+```
+
+### Test — 11 test
+
+- `test_agent_mode.py` (7): help, stdout, file, campi attesi, path inesistente, exit code
+- `test_agent_integration.py` (4): flusso completo → AuditResult deserializzabile
+
+---
+
+## Blocco 16 — Test End-to-End Completi
+
+### `test_e2e_full_product.py` — 11 test
+
+Suite E2E che verifica l'intero prodotto come lo userebbe un utente:
+
+1. **CLI classica invariata**: `cto-audit scan /repo --auto-approve` con tutte le opzioni
+2. **CLI con sorgente remota**: mock subprocess → clone → audit → risultato
+3. **Multi-source project**: YAML config con 2 sorgenti → aggregazione
+4. **Dashboard lifecycle**: `create_app()` → tutti i componenti renderizzano
+5. **Agent mode**: `cto-audit agent /repo -o report.json` → JSON completo
+6. **Frozen mode simulation**: mock `sys._MEIPASS` → data dir corretti
+7. **Backward compatibility**: import, LocalRepoSource, AuditOrchestrator invariati
+
+### Totale complessivo progetto: 932 test (52 test files)
+
+| Gruppo | Test | File |
+|--------|------|------|
+| Core (modelli, config, struttura) | 64 | 3 |
+| Collectors + HITL | 120 | 6 |
+| Analyzers (4 layer) | 105 | 5 |
+| Scoring + Compliance | 86 | 5 |
+| Remediation + LLM | 107 | 7 |
+| Source Connectors | 91 | 9 |
+| Multi-Source | 18 | 3 |
+| Dashboard | 43 | 4 |
+| Executable + Frozen | 11 | 3 |
+| Agent Mode | 11 | 2 |
+| E2E | 11 | 1 |
+| Scenari realistici + Benchmark | 165 | 4 |
+

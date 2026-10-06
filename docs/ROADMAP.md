@@ -36,7 +36,7 @@ Per mantenere massima distanza dal patent US Provisional (vedi [PATENT_ANALYSIS.
 | Componente | Dettaglio |
 |------------|-----------|
 | Regole di analisi | 36 (10 infra + 7 architettura + 9 security + 10 quality) |
-| Test automatizzati | 733 test su 31 file |
+| Test automatizzati | 932 test su 52 file |
 | Repository validate | 29 (20 reali + 9 sintetiche) |
 | Precision/Recall | 100% / 100% su scenari sintetici |
 | Score medio | 78.3/100 (range: 56-94) su 20 repo reali |
@@ -89,10 +89,12 @@ Per mantenere massima distanza dal patent US Provisional (vedi [PATENT_ANALYSIS.
 
 **Obiettivo**: fonti multiple, report professionali, integrazioni CI/CD.
 
-### 3.1 GitRemoteSource
-- `cto-audit scan --git https://github.com/org/repo`
-- git clone in directory temporanea + scan + cleanup
-- Nessuna esecuzione codice, solo clone e analisi statica
+### 3.1 Source Connectors (COMPLETATO)
+- ~~`cto-audit scan --git https://github.com/org/repo`~~ → Implementato con auto-detection URL
+- `cto-audit scan https://github.com/owner/repo` — GitHub, GitLab, Azure DevOps, Bitbucket, Archive
+- `--source-type`, `--token` (env var `CTO_AUDIT_TOKEN`), `--branch`
+- Clone shallow in temp dir, context manager per cleanup automatico
+- 6 connettori: `GitHubSource`, `GitLabSource`, `AzureDevOpsSource`, `BitbucketSource`, `ArchiveSource` + `SourceFactory`
 - **Patent safety**: git clone e prior art universale, nessun sandbox
 
 ### 3.2 PDF Report Professionale
@@ -160,10 +162,15 @@ Per mantenere massima distanza dal patent US Provisional (vedi [PATENT_ANALYSIS.
 - HIPAA: requisiti tecnici per dati sanitari
 - **Patent safety**: rule-based mapping deterministico per ogni framework — compliance tools sono prior art
 
-### 5.2 Multi-Repo Dashboard
-- `cto-audit dashboard --repos repo1/ repo2/ repo3/`
-- Output HTML locale (zero cloud, zero server)
-- Tabella comparativa score, heatmap finding, trend aggregato
+### 5.2 Multi-Repo Dashboard (COMPLETATO)
+- ~~`cto-audit dashboard --repos repo1/ repo2/ repo3/`~~ → Implementato come Dashboard Dash + `cto-audit project config.yml`
+- Dashboard interattiva con Dash + Plotly, tema dark "intelligence style"
+- `cto-audit ui` per avvio dashboard, `cto-audit project config.yml` per audit multi-repo
+- Multi-source aggregation: media pesata per LOC su N repository
+- 8 componenti: overview, layers, findings, remediation, compliance, history, source picker, project view
+- Agent mode: `cto-audit agent /path -o report.json` per output JSON headless
+- Eseguibile standalone: PyInstaller .exe con `sys._MEIPASS` frozen mode
+- Container Docker: `Dockerfile` + `docker-compose.yml`
 - **Patent safety**: dashboard locale, non SaaS — prior art: SonarQube dashboard locale
 
 ### 5.3 Report Internationalization
@@ -212,7 +219,12 @@ Riepilogo della distanza dal patent per ogni feature pianificata.
 | tree-sitter AST | Analisi statica, no execution | **MASSIMA** — prior art | McCabe 1976, Halstead 1977 |
 | NIST CSF profile | Rule-based mapping YAML | **MASSIMA** — prior art | NIST CSF 2014 |
 | Cross-layer correlation | Formula matematica deterministica | **ALTA** — no LLM fusion | CVSS environmental score 2005 |
-| GitRemoteSource | git clone + scan statico | **MASSIMA** — prior art | Git 2005 |
+| Source Connectors | git clone + scan statico, 6 provider | **MASSIMA** — prior art | Git 2005 |
+| Multi-Source | Aggregazione LOC-weighted, YAML config | **MASSIMA** — prior art | SonarQube multi-project |
+| Dashboard UI | Dash + Plotly locale, zero cloud | **MASSIMA** — prior art | SonarQube dashboard 2007 |
+| Agent Mode | JSON headless output | **MASSIMA** — prior art | CLI tool output |
+| Executable | PyInstaller, frozen mode | **MASSIMA** — prior art | PyInstaller 2005 |
+| Container | Dockerfile, docker-compose | **MASSIMA** — prior art | Docker 2013 |
 | PDF report | HTML → PDF con WeasyPrint | **MASSIMA** — prior art | Ogni tool genera report |
 | CI/CD integrations | GitHub Action/GitLab CI template | **MASSIMA** — prior art | SonarQube Scanner 2007 |
 | Ollama enhancement | LLM opzionale, non nel core | **ALTA** — graceful degradation | ChatGPT API 2023 |
@@ -223,7 +235,7 @@ Riepilogo della distanza dal patent per ogni feature pianificata.
 | MCP server | Protocollo IDE aperto | **MASSIMA** — prior art | LSP 2016, MCP 2024 |
 | Industry profiles | YAML scoring configurabile | **MASSIMA** — prior art | SonarQube quality profiles 2007 |
 | Compliance aggiuntivi | Rule-based mapping per framework | **MASSIMA** — prior art | Compliance tools pre-2020 |
-| Multi-repo dashboard | HTML locale, zero SaaS | **ALTA** — no cloud dashboard | SonarQube multi-project |
+| Multi-repo dashboard | Dash + Plotly locale, zero SaaS | **ALTA** — no cloud dashboard | SonarQube multi-project |
 | i18n | File traduzione YAML | **MASSIMA** — prior art | Universale |
 | Container rules | Dockerfile/K8s linting | **MASSIMA** — prior art | hadolint 2016, Checkov 2019 |
 | API security | OpenAPI validation, OWASP API | **MASSIMA** — prior art | OWASP API Top 10 2019 |
@@ -246,7 +258,12 @@ Strategia di monetizzazione: core open source + feature premium.
 | Remediation KB (37 entry) | 1 (completata) |
 | OWASP Top 10 regole | 2 |
 | tree-sitter AST analysis | 2 |
-| GitRemoteSource | 3 |
+| Source Connectors (GitHub, GitLab, Azure, Bitbucket, Archive) | 3 (completata) |
+| Multi-Source Aggregation (project YAML) | 3 (completata) |
+| Dashboard UI (Dash + Plotly) | 3 (completata) |
+| Agent Mode (JSON headless) | 3 (completata) |
+| Container Docker (Dockerfile, docker-compose) | 3 (completata) |
+| Eseguibile standalone (PyInstaller) | 3 (completata) |
 | CI/CD templates (GitHub Action, GitLab CI) | 3 |
 | Custom rules engine | 4 |
 | Container security rules | 5 |
@@ -268,7 +285,7 @@ Strategia di monetizzazione: core open source + feature premium.
 | MCP server (IDE integration) | 4 | Developer |
 | Industry-specific profiles (fintech, healthtech, govtech) | 4 | Verticali |
 | AI Act, SOC2, PCI-DSS, ISO 27001, HIPAA | 5 | Enterprise |
-| Multi-repo dashboard | 5 | Enterprise |
+| Multi-repo dashboard | 3 (completata) | Enterprise |
 | Report i18n (EN, IT, DE, FR, ES) | 5 | Internazionale |
 
 ---
@@ -297,5 +314,5 @@ Strategia di monetizzazione: core open source + feature premium.
 
 ---
 
-*Ultimo aggiornamento: Febbraio 2026*
+*Ultimo aggiornamento: Marzo 2026*
 *Per l'analisi patent dettagliata vedi [PATENT_ANALYSIS.md](PATENT_ANALYSIS.md)*

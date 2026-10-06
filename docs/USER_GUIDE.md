@@ -17,10 +17,15 @@ Guida pratica per interpretare i risultati, personalizzare i profili e ottenere 
 11. [Compliance NIS2 e GDPR](#compliance-nis2-e-gdpr)
 12. [Board Report e Remediation](#board-report-e-remediation)
 13. [Formati di output](#formati-di-output)
-14. [Scenari d'uso comuni](#scenari-duso-comuni)
-15. [FAQ](#faq)
-16. [Storico Audit e Delta](#storico-audit-e-delta)
-17. [Accesso alla Rete](#accesso-alla-rete)
+14. [Source Connectors (sorgenti remote)](#source-connectors)
+15. [Audit Multi-Repo](#audit-multi-repo)
+16. [Dashboard Interattiva](#dashboard-interattiva)
+17. [Agent Mode e Container](#agent-mode-e-container)
+18. [Eseguibile Standalone](#eseguibile-standalone)
+19. [Scenari d'uso comuni](#scenari-duso-comuni)
+20. [FAQ](#faq)
+21. [Storico Audit e Delta](#storico-audit-e-delta)
+22. [Accesso alla Rete](#accesso-alla-rete)
 
 ---
 
@@ -545,6 +550,239 @@ cto-audit scan /path --board-report
 
 ---
 
+## Source Connectors
+
+CTO Audit Agent puo analizzare codice da sorgenti diverse, non solo directory locali.
+
+### Sorgenti supportate
+
+| Sorgente | Esempio | Auto-detect |
+|---|---|---|
+| **Locale** | `cto-audit scan /path/to/repo` | Default |
+| **GitHub** | `cto-audit scan https://github.com/owner/repo` | `github.com` nell'URL |
+| **GitLab** | `cto-audit scan https://gitlab.com/owner/repo` | `gitlab.com` nell'URL |
+| **Azure DevOps** | `cto-audit scan https://dev.azure.com/org/project/_git/repo` | `dev.azure.com` nell'URL |
+| **Bitbucket** | `cto-audit scan https://bitbucket.org/owner/repo` | `bitbucket.org` nell'URL |
+| **Archivio** | `cto-audit scan /path/to/code.zip` | Estensione `.zip`/`.tar.gz` |
+
+### Auto-detection
+
+Il tipo di sorgente viene rilevato automaticamente dall'input. Puoi forzarlo con `--source-type`:
+
+```bash
+cto-audit scan https://github.com/owner/repo --source-type github
+```
+
+### Autenticazione per repo private
+
+Usa `--token` o la variabile d'ambiente `CTO_AUDIT_TOKEN`:
+
+```bash
+# Via flag
+cto-audit scan https://github.com/owner/private-repo --token ghp_xxxxx
+
+# Via env var
+export CTO_AUDIT_TOKEN=ghp_xxxxx
+cto-audit scan https://github.com/owner/private-repo
+```
+
+Il token non viene mai loggato o persistito. Viene usato solo per il clone e rimosso dalla memoria.
+
+### Branch e tag
+
+```bash
+# Clone di un branch specifico
+cto-audit scan https://github.com/owner/repo --branch develop
+
+# Clone di un tag
+cto-audit scan https://github.com/owner/repo --branch v2.0.0
+```
+
+### Come funziona
+
+Tutte le sorgenti remote seguono lo stesso pattern:
+1. Clone shallow (`--depth 1`) in directory temporanea
+2. Wrap in `LocalRepoSource` (stessa logica di analisi)
+3. Cleanup automatico al termine (`__exit__` del context manager)
+
+Requisito: `git` deve essere installato e nel PATH per le sorgenti Git.
+
+---
+
+## Audit Multi-Repo
+
+Per scenari di consulenza con N repository (es. 15 microservizi), puoi creare un file YAML di configurazione:
+
+### Formato config
+
+```yaml
+# project.yml
+name: "Acme Platform"
+sources:
+  - name: "backend-api"
+    source_type: "github"
+    path_or_url: "https://github.com/acme/api"
+    token_env: "GITHUB_TOKEN"     # legge il token da questa env var
+    branch: "main"
+  - name: "frontend"
+    source_type: "local"
+    path_or_url: "/path/to/frontend"
+  - name: "shared-libs"
+    source_type: "zip"
+    path_or_url: "/path/to/libs.zip"
+```
+
+### Esecuzione
+
+```bash
+cto-audit project project.yml -o aggregated.json
+cto-audit project project.yml --offline -o aggregated.json
+```
+
+### Output
+
+Il JSON di output contiene:
+- `project_name`: nome del progetto
+- `aggregated_score`: score complessivo (media pesata per LOC)
+- `source_results`: risultato individuale per ogni sorgente
+- `aggregated_layer_scores`: score per layer aggregato
+- `total_loc`: LOC totali del progetto
+- `failed_sources`: sorgenti che hanno fallito (le altre continuano)
+
+### Come funziona l'aggregazione
+
+Lo score aggregato e una **media pesata per LOC** (Lines of Code):
+
+```
+score_aggregato = sum(score_i * loc_i) / sum(loc_i)
+```
+
+Un repository con 50.000 LOC pesa 10x rispetto a uno con 5.000 LOC.
+
+---
+
+## Dashboard Interattiva
+
+La dashboard offre un'interfaccia visuale dark "intelligence style" per navigare i risultati dell'audit.
+
+### Prerequisiti
+
+```bash
+pip install cto-audit[ui]
+```
+
+### Avvio
+
+```bash
+# Apre il browser automaticamente
+cto-audit ui
+
+# Porta personalizzata
+cto-audit ui --port 9000
+
+# Senza aprire il browser (utile in container)
+cto-audit ui --no-browser
+```
+
+### Sezioni della dashboard
+
+| Sezione | Cosa mostra |
+|---|---|
+| **Overview** | Gauge health score, card per ogni layer, stack badges, maturity |
+| **Layers** | Tab per layer con findings dettagliati e evidence chain |
+| **Findings** | Tabella filtrabile e ordinabile per severity, layer, rule_id |
+| **Remediation** | Azioni prioritarie, scatter chart effort vs impatto, what-if slider |
+| **Compliance** | Ring chart per profilo NIS2/GDPR con progress e stato controlli |
+| **History** | Trend score nel tempo, delta finding nuovi/risolti |
+| **Source Picker** | Seleziona sorgente (locale/remota), compila campi, avvia audit dalla UI |
+| **Project View** | Vista multi-repo con score aggregato e breakdown per repo |
+
+### Flusso operativo
+
+1. Apri la dashboard (`cto-audit ui`)
+2. Nella sezione **Source Picker**, seleziona il tipo di sorgente
+3. Compila il percorso/URL e eventuali opzioni
+4. Clicca "Avvia Audit"
+5. Naviga tra le tab per esplorare i risultati
+
+---
+
+## Agent Mode e Container
+
+Il comando `agent` produce output JSON puro, ideale per CI/CD e container Docker.
+
+### Agent mode
+
+```bash
+# JSON su file
+cto-audit agent /path/to/repo -o report.json --offline
+
+# JSON su stdout (per piping)
+cto-audit agent /path/to/repo --offline | jq '.health_score.overall_score'
+```
+
+Caratteristiche:
+- Auto-approve implicito (non chiede conferma)
+- Log su stderr (non inquina stdout)
+- Exit code 0 su successo, 1 su errore
+- Output JSON deserializzabile in `AuditResult`
+
+### Container Docker
+
+```bash
+# Build
+docker build -t cto-audit .
+
+# Audit con volume mount (codice read-only)
+docker run -v /code:/audit:ro -v /out:/output cto-audit agent /audit -o /output/report.json
+
+# Dashboard in container
+docker run -p 8050:8050 cto-audit ui --port 8050 --no-browser
+```
+
+Il codice e montato read-only. Solo il report JSON esce dal container. Il cliente puo ispezionare l'immagine Docker.
+
+### docker-compose
+
+```yaml
+services:
+  agent:
+    build: .
+    volumes:
+      - ./test-repo:/audit:ro
+      - ./output:/output
+    command: agent /audit -o /output/report.json
+
+  dashboard:
+    build: .
+    ports:
+      - "8050:8050"
+    command: ui --port 8050 --no-browser
+```
+
+---
+
+## Eseguibile Standalone
+
+L'utente non-tecnico scarica l'exe, doppio click, si apre la dashboard nel browser. Zero Python, zero pip, zero terminale.
+
+### Build
+
+```bash
+pip install cto-audit[build]
+python scripts/build_exe.py
+# → dist/cto-audit.exe (Windows) o dist/cto-audit (macOS/Linux)
+```
+
+### Cosa include l'exe
+
+- Dashboard completa con tutti i componenti
+- Tutti i profili YAML (scoring, compliance, remediation KB)
+- Asset Dash/Plotly/Bootstrap
+- Git deve essere installato separatamente per le sorgenti remote
+
+---
+
 ## Scenari d'uso comuni
 
 ### Audit rapido prima di un merge
@@ -601,6 +839,36 @@ cto-audit scan . --auto-approve --offline -o v2.json
 ```bash
 cto-audit scan . --auto-approve --offline -o audit.json
 # Poi parsare audit.json nel CI per gate di qualita
+```
+
+### Audit di un repo GitHub privato
+
+```bash
+export CTO_AUDIT_TOKEN=ghp_xxxxx
+cto-audit scan https://github.com/acme/private-api --auto-approve -o report.json
+```
+
+### Audit multi-repo per consulenza
+
+```bash
+# Crea project.yml con le sorgenti
+cto-audit project project.yml --offline -o audit-acme.json
+```
+
+### Audit in container Docker
+
+```bash
+docker run -v /cliente/codice:/audit:ro -v ./out:/output cto-audit agent /audit -o /output/report.json
+```
+
+Il codice resta read-only, solo il JSON esce.
+
+### Dashboard per presentazione
+
+```bash
+pip install cto-audit[ui]
+cto-audit ui --port 8050
+# Apri nel browser, naviga tra le tab, screenshot per la presentazione
 ```
 
 ---

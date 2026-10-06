@@ -18,6 +18,8 @@ from typing import Any
 
 from pydantic import BaseModel, Field, field_validator
 
+from cto_audit.remediation.models import RemediationPipelineResult
+
 
 # --- Enumerazioni ---
 
@@ -290,9 +292,9 @@ class AuditResult(BaseModel):
         description="Classificazioni privacy dei file"
     )
     metadata: AuditMetadata = Field(..., description="Metadati dell'esecuzione")
-    remediation: Any = Field(
+    remediation: RemediationPipelineResult | None = Field(
         default=None,
-        description="Risultato pipeline remediation (RemediationPipelineResult | None)"
+        description="Risultato pipeline remediation"
     )
 
 
