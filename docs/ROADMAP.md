@@ -2,6 +2,7 @@
 
 > Roadmap dettagliata con annotazioni patent safety e mapping open core.
 > Per l'overview del progetto vedi [PROJECT_OVERVIEW.md](PROJECT_OVERVIEW.md).
+> Piano operativo delle prossime fasi (validazione, EPSS, etichette, stimatore locale): [WORKPLAN_DUE_DILIGENCE.md](WORKPLAN_DUE_DILIGENCE.md).
 
 ---
 

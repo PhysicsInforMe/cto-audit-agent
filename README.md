@@ -473,6 +473,7 @@ La suite di test comprende **1.053 test** distribuiti in 58 file, con 7 scenari 
 - **[Tester Guide](docs/TESTER_GUIDE.md)**: come testare e validare il tool
 - **[Validation Methodology](docs/VALIDATION_METHODOLOGY.md)**: metodologia di validazione
 - **[Architecture](ARCHITECTURE.md)**: documentazione del codice blocco per blocco
+- **[Work plan Due Diligence](docs/WORKPLAN_DUE_DILIGENCE.md)**: fasi successive, criteri di uscita, decisioni prese
 
 ## Validazione
 
