@@ -24,6 +24,8 @@ Descrive cosa fa ogni componente, le scelte implementative, e come i pezzi si co
 > remediation, compliance, history, source picker, project view).
 > **Agent Mode**: output JSON headless per container e CI/CD.
 > **Executable**: PyInstaller .exe con supporto `sys._MEIPASS` frozen mode.
+> **Due Diligence (Blocco 17)**: layer Provenance e Team, profilo `due-diligence` a 6 layer,
+> GitHistoryCollector, LicenseChecker, report lato acquirente. 1.035 test (57 file).
 
 ---
 
@@ -1561,3 +1563,151 @@ Suite E2E che verifica l'intero prodotto come lo userebbe un utente:
 | E2E | 11 | 1 |
 | Scenari realistici + Benchmark | 165 | 4 |
 
+---
+
+## Blocco 17 — Due Diligence: layer Provenance e Team
+
+### Cosa e stato fatto
+
+Il tool nasce per il CTO che entra in azienda. La due diligence per conto di un
+terzo (investitore, acquirente) pone domande diverse: di chi e il codice, si puo
+cedere, c'e un team dietro, e vivo. Nessuno dei 4 layer storici le copriva.
+Questo blocco aggiunge due layer, un profilo di scoring, un report dedicato e
+un collector git, senza cambiare il comportamento dei profili esistenti.
+
+### `core/models.py` — Layer, GitSummary, AuditResult
+
+- `Layer` passa da 4 a 6 valori: `PROVENANCE` e `TEAM`.
+- `LAYER_ORDER` (lista ordinata dei layer) e `CORE_LAYERS` (i 4 storici) sostituiscono
+  le liste hardcoded nei reporter.
+- `GitSummary`: riepilogo aggregato dello storico git. Per scelta non contiene
+  nomi ne email: solo conteggi, quote e finestre temporali.
+- `AuditResult` guadagna `git_summary` e `dependency_licenses` (opzionali, default vuoti).
+- `AuditMetadata.active_layers`: quali layer sono stati effettivamente analizzati.
+
+### `collectors/git_history.py` — GitHistoryCollector
+
+Esegue `git log --all` (con `--numstat` in una seconda passata) e `git tag` sulla
+root della sorgente, con cap a 20.000 commit e timeout 120 s. Calcola: commit
+totali e merge, primo/ultimo commit, autori distinti (per email, mai esportati),
+commit a 90/180/365 giorni, quota del primo autore (storico intero e ultimi 12
+mesi), tag, commit con trailer `Co-Authored-By` di un assistente AI, messaggi
+generici, quota di righe inserite dai 3 commit piu grandi, commit per mese.
+Degradazione graziosa: git assente, directory non repo, repo vuoto → `available=False`
+con `reason`. Clone shallow → `is_shallow=True`.
+
+### `collectors/license_checker.py` — LicenseChecker
+
+Classifica la licenza di ogni dipendenza (riusa `parse_dependencies` del CVE checker)
+in cinque categorie: copyleft forte (GPL, AGPL, SSPL), copyleft debole (LGPL, MPL,
+EPL, GPL con linking exception), permissiva, non standard/commerciale
+("SEE LICENSE IN", "Commercial", URL, UNLICENSED), ignota. Offline usa una KB
+curata (`OFFLINE_LICENSE_KB`, verificata sui registri PyPI e npm il 2026-10-06);
+online interroga `pypi.org/pypi/<pkg>/json` e `registry.npmjs.org/<pkg>/latest`
+inviando solo il nome del pacchetto, dietro lo stesso consenso rete del CVE check.
+
+### `analyzers/provenance.py` — ProvenanceAnalyzer (Layer 5)
+
+| Regola | Severita | Cosa rileva |
+|---|---|---|
+| PROV-LICENSE-001 | medium | Nessun LICENSE/COPYING/NOTICE e nessuna nota di copyright nel README |
+| PROV-COPYLEFT-001 | high | Dipendenze GPL/AGPL/SSPL |
+| PROV-COPYLEFT-002 | low | Dipendenze LGPL/MPL/EPL |
+| PROV-COMMERCIAL-001 | medium | Dipendenze con licenza commerciale o non standard |
+| PROV-LICENSE-INFO | info | Inventario licenze: quante classificate, quante ignote |
+| PROV-VENDORED-001 | medium | File sorgente in vendor/, third_party/, external/... |
+| PROV-COPYRIGHT-001 | medium | Header di copyright con 2+ titolari diversi nei sorgenti |
+| PROV-CLAIMS-001 | medium | README dichiara Docker/Kubernetes/IaC/CI/test senza riscontro nel repo |
+| PROV-CERT-INFO | info | README dichiara SOC 2, ISO 27001, HIPAA, PCI DSS... (non verificabili dal codice) |
+| PROV-SBOM-001 | low | Nessun file SBOM (CycloneDX/SPDX); framework_ref NIS2 Art.21(2)(d) |
+
+### `analyzers/team.py` — TeamAnalyzer (Layer 6)
+
+Riceve il `GitSummary` dall'orchestrator (nessun accesso al filesystem).
+
+| Regola | Severita | Soglia |
+|---|---|---|
+| TEAM-GIT-INFO | info | Storico non disponibile o shallow |
+| TEAM-BUSFACTOR-001 | high | Autore unico con >=10 commit, oppure primo autore >=80% con >=20 commit (finestra 12 mesi se popolata, altrimenti storico intero) |
+| TEAM-ACTIVITY-001 | high | Ultimo commit >180 giorni fa |
+| TEAM-ACTIVITY-002 | medium | Ultimo commit tra 90 e 180 giorni fa |
+| TEAM-HISTORY-001 | medium | I 3 commit piu grandi coprono >=60% delle righe inserite |
+| TEAM-HISTORY-002 | low | Meno di 5 commit (storia non valutabile; valutazione si ferma qui) |
+| TEAM-RELEASE-001 | low | Nessun tag con >=100 commit |
+| TEAM-MSGQUAL-001 | low | >=40% di messaggi generici su >=20 commit |
+| TEAM-AIGEN-INFO | info | Quota di commit con co-autore AI dichiarato |
+
+Riferimento per il bus factor: Avelino, Passos, Hora, Valente, *A Novel Approach
+for Estimating Truck Factors*, ICPC 2016 (arXiv:1604.06766).
+
+### Scoring e orchestrator
+
+- `scoring/profile.py`: i layer validi derivano dall'enum `Layer`, non da una lista fissa.
+- `scoring/engine.py`: un layer entra in `layer_scores` solo se pesato dal profilo
+  o se ha prodotto finding. Con `default` e `vc-diligence` l'output e identico a prima.
+  `LAYER_RULES` include le regole dei due layer nuovi per il calcolo della confidence.
+- `core/orchestrator.py`: carica il profilo prima degli analyzer e lancia solo i layer
+  pesati (`_active_layers`, che rispetta anche `--focus`). Se Team o Provenance sono
+  attivi, esegue `GitHistoryCollector` una volta sola sulla root (locale o clone
+  temporaneo, `_resolve_root`). Il pannello di consenso rete elenca anche i registri
+  PyPI/npm quando Provenance e attivo.
+- `scoring-profiles/due-diligence.yml`: 6 layer, pesi security 0.25, provenance 0.20,
+  team 0.15, architecture 0.15, quality 0.15, infra 0.10; 61 regole.
+- `remediation-kb/due-diligence.yml`: 15 entry (8 PROV + 7 TEAM). `RemediationLoader.load_all()`
+  unisce tutte le KB della directory; `from_yaml("default")` resta invariata (37 entry).
+
+### `reporters/due_diligence.py` — DueDiligenceReporter
+
+Report Markdown lato acquirente, deterministico, dieci sezioni: perimetro e limiti,
+sintesi con deal flag (regole su cedibilita, continuita, secret esposti), inventario
+dell'asset (incluso storico git e inventario licenze), red flag e yellow flag con il
+rischio dalla KB, dichiarazioni vs evidenze, costo di remediation in ore (somma degli
+effort KB per regola scattata), domande per il management (template per regola),
+compliance, evidence chain. CLI: `cto-audit scan <target> --due-diligence --output dd.md`
+(il flag imposta il profilo `due-diligence` se non specificato e attiva la pipeline
+remediation per le stime di effort).
+
+### Gate HITL obbligatorio sull'output LLM
+
+Prima di questo blocco l'orchestrator costruiva `InterpretationAgent(router, kb)` senza
+`hitl_enabled`: il testo di Ollama finiva nel board report senza approvazione, in
+contrasto con quanto documentato. Ora `_run_remediation_pipeline`:
+
+- con `--no-llm` non interpella l'LLM (motivo registrato in `llm_skipped_reason`);
+- con `--auto-approve` (nessun revisore: CI, agent mode) non interpella l'LLM, perche
+  l'output richiederebbe un'approvazione che nessuno puo dare;
+- altrimenti interpella l'LLM con `hitl_enabled=True` e mostra l'output in un pannello
+  (`_llm_approval_input`); solo la risposta `s`/`si`/`y`/`yes` lo inserisce nel report,
+  EOF o interruzione valgono come rifiuto e si torna al template deterministico.
+
+`RemediationPipelineResult` registra `llm_hitl_approved` e `llm_skipped_reason`; il report
+di due diligence etichetta l'executive summary come "generato da LLM, approvato dal
+revisore" oppure "template deterministico" e spiega il motivo. Il router e iniettabile
+(`AuditOrchestrator(llm_router=...)`) per i test (`test_llm_hitl.py`, 8 test).
+
+### Reporter esistenti
+
+`terminal`, `markdown`, `html`, `board`, `comparison`: le liste hardcoded dei 4 layer
+sono sostituite da `LAYER_ORDER`; le mappe dei nomi includono i due layer nuovi. Con i
+profili a 4 layer non cambia nulla, perche i layer assenti vengono saltati.
+
+### Bug fix collaterale — `.gitignore` in `sources/local.py`
+
+I pattern con path (`benchmarks/repos/`), ancorati (`/dist`) o con glob su path
+(`docs/*.tmp`) venivano confrontati con il singolo componente del percorso e non
+escludevano nulla. Lo scan della repo del tool stesso leggeva 36.000 file dei clone
+di benchmark (oltre 5 minuti); dopo il fix ne legge 172 (1 secondo). Inoltre i file
+"mai ignorati" (`setup.py`, `requirements.txt`, ...) ora restano esclusi se stanno
+dentro una directory ignorata.
+
+### Test — 1.035 totali (57 file; 103 nuovi in 5 file)
+
+I 43 test della dashboard richiedono `dash` installato (`pip install cto-audit[ui]`); gli altri 992 girano nel venv base.
+
+| File | Test | Cosa copre |
+|---|---|---|
+| `test_git_history.py` | 13 | Collector su repo git reali in tmp_path; assenza di PII nel summary; parsing |
+| `test_team.py` | 18 | Ogni regola del TeamAnalyzer su GitSummary sintetici |
+| `test_provenance.py` | 45 | classify_license, LicenseChecker offline/online (MockTransport), ogni regola |
+| `test_due_diligence.py` | 23 | Profilo, engine a 4 e 6 layer, orchestrator end-to-end, report, CLI |
+| `test_gitignore_nested.py` | 4 | Regressione pattern annidati, ancorati, con path |

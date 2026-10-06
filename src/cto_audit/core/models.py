@@ -42,11 +42,26 @@ class Severity(str, Enum):
 
 
 class Layer(str, Enum):
-    """I 4 layer di analisi CTO."""
+    """
+    I layer di analisi CTO.
+
+    I primi 4 (infra, architecture, security, quality) sono i layer storici,
+    attivi nel profilo `default`. I due layer di due diligence (provenance,
+    team) si attivano solo nei profili che li pesano (es. `due-diligence`).
+    """
     INFRA = "infra"
     ARCHITECTURE = "architecture"
     SECURITY = "security"
     QUALITY = "quality"
+    PROVENANCE = "provenance"   # IP, licenze, provenienza del codice
+    TEAM = "team"               # Continuita di sviluppo, bus factor, storico git
+
+
+# Ordine canonico di presentazione dei layer nei report
+LAYER_ORDER: list[str] = [layer.value for layer in Layer]
+
+# Layer storici (profilo default): usati per retro-compatibilita
+CORE_LAYERS: tuple[str, ...] = ("infra", "architecture", "security", "quality")
 
 
 class ProjectType(str, Enum):
@@ -281,6 +296,45 @@ class AuditMetadata(BaseModel):
         default=None,
         description="Confidenza della rilevazione tipo progetto (0.0-1.0)"
     )
+    active_layers: list[str] = Field(
+        default_factory=list,
+        description="Layer effettivamente analizzati (dal profilo di scoring o --focus)"
+    )
+
+
+class GitSummary(BaseModel):
+    """
+    Riepilogo aggregato dello storico git, senza dati personali.
+
+    Non contiene nomi ne email degli autori: solo conteggi e quote.
+    Usato dal layer TEAM e dal report di due diligence.
+    """
+    available: bool = Field(..., description="True se lo storico git e stato letto")
+    reason: str | None = Field(default=None, description="Motivo se non disponibile")
+    is_shallow: bool = Field(default=False, description="True se il clone e shallow (storico troncato)")
+    total_commits: int = Field(default=0, ge=0)
+    merge_commits: int = Field(default=0, ge=0)
+    first_commit: datetime | None = None
+    last_commit: datetime | None = None
+    authors_total: int = Field(default=0, ge=0, description="Autori distinti (per email)")
+    authors_365d: int = Field(default=0, ge=0, description="Autori attivi negli ultimi 365 giorni")
+    commits_90d: int = Field(default=0, ge=0)
+    commits_180d: int = Field(default=0, ge=0)
+    commits_365d: int = Field(default=0, ge=0)
+    top_author_share: float = Field(default=0.0, ge=0.0, le=1.0, description="Quota commit del primo autore (tutto lo storico)")
+    top_author_share_365d: float = Field(default=0.0, ge=0.0, le=1.0, description="Quota commit del primo autore (ultimi 365 giorni)")
+    tags_total: int = Field(default=0, ge=0)
+    ai_coauthored_commits: int = Field(default=0, ge=0, description="Commit con trailer Co-Authored-By di un assistente AI")
+    trivial_message_commits: int = Field(default=0, ge=0, description="Commit con messaggio generico (fix, wip, update...)")
+    insertions_total: int = Field(default=0, ge=0)
+    top3_commits_insertions_share: float = Field(
+        default=0.0, ge=0.0, le=1.0,
+        description="Quota di righe inserite dai 3 commit piu grandi (storico compresso / code dump)"
+    )
+    commits_by_month: dict[str, int] = Field(
+        default_factory=dict,
+        description="Commit per mese (YYYY-MM) negli ultimi 12 mesi"
+    )
 
 
 class AuditResult(BaseModel):
@@ -295,6 +349,14 @@ class AuditResult(BaseModel):
     remediation: RemediationPipelineResult | None = Field(
         default=None,
         description="Risultato pipeline remediation"
+    )
+    git_summary: GitSummary | None = Field(
+        default=None,
+        description="Riepilogo storico git (solo se layer team/provenance attivi)"
+    )
+    dependency_licenses: list[dict[str, Any]] = Field(
+        default_factory=list,
+        description="Inventario licenze dipendenze (solo se layer provenance attivo)"
     )
 
 

@@ -14,6 +14,7 @@ from __future__ import annotations
 from pathlib import Path
 
 from cto_audit.core.models import (
+    LAYER_ORDER,
     AuditDelta,
     AuditResult,
     Finding,
@@ -50,6 +51,8 @@ LAYER_NAMES: dict[str, str] = {
     "architecture": "Architettura",
     "security": "Sicurezza",
     "quality": "Qualita Codice",
+    "provenance": "Provenienza & IP",
+    "team": "Team & Continuita",
 }
 
 
@@ -170,7 +173,7 @@ class MarkdownReporter:
             "|-------|-------|------------|-------|---------|",
         ]
 
-        for layer_name in ["infra", "architecture", "security", "quality"]:
+        for layer_name in LAYER_ORDER:
             if layer_name not in health.layer_scores:
                 continue
             ls = health.layer_scores[layer_name]
@@ -236,7 +239,7 @@ class MarkdownReporter:
             "|-------|-------|",
         ]
 
-        for layer_name in ["infra", "architecture", "security", "quality"]:
+        for layer_name in LAYER_ORDER:
             if layer_name in delta.layer_deltas:
                 ld = delta.layer_deltas[layer_name]
                 ld_sign = "+" if ld > 0 else ""
@@ -266,7 +269,7 @@ class MarkdownReporter:
         """
         lines = ["## Dettaglio Finding", ""]
 
-        for layer_name in ["infra", "architecture", "security", "quality"]:
+        for layer_name in LAYER_ORDER:
             if layer_name not in health.layer_scores:
                 continue
             ls = health.layer_scores[layer_name]
@@ -311,7 +314,7 @@ class MarkdownReporter:
         """
         lines = ["## Catena di Evidenze", ""]
 
-        for layer_name in ["infra", "architecture", "security", "quality"]:
+        for layer_name in LAYER_ORDER:
             if layer_name not in health.layer_scores:
                 continue
             ls = health.layer_scores[layer_name]

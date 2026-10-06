@@ -56,6 +56,16 @@ LAYER_RULES: dict[str, list[str]] = {
         "QUAL-PRECOMMIT-001", "QUAL-EDITORCONFIG-001",
         "QUAL-CONTRIBUTING-001", "QUAL-CHANGELOG-001",
     ],
+    "provenance": [
+        "PROV-LICENSE-001", "PROV-COPYLEFT-001", "PROV-COPYLEFT-002",
+        "PROV-COMMERCIAL-001", "PROV-VENDORED-001", "PROV-COPYRIGHT-001",
+        "PROV-CLAIMS-001", "PROV-SBOM-001",
+    ],
+    "team": [
+        "TEAM-BUSFACTOR-001", "TEAM-ACTIVITY-001", "TEAM-ACTIVITY-002",
+        "TEAM-HISTORY-001", "TEAM-HISTORY-002", "TEAM-RELEASE-001",
+        "TEAM-MSGQUAL-001",
+    ],
 }
 
 # Regole che richiedono un web framework per essere applicabili
@@ -145,7 +155,10 @@ class ScoringEngine:
         Calcola lo HealthScore complessivo.
 
         1. Raggruppa i finding per layer
-        2. Calcola LayerScore per ogni layer (anche quelli senza finding → 100)
+        2. Calcola LayerScore per ogni layer attivo (anche senza finding → 100).
+           Un layer e attivo se ha un peso nel profilo oppure se ha prodotto
+           finding: cosi i profili a 4 layer restano identici a prima e i layer
+           di due diligence compaiono solo quando pesati o analizzati.
         3. Aggrega con media pesata usando layer_weights del profilo
 
         Args:
@@ -161,9 +174,11 @@ class ScoringEngine:
         for finding in all_findings:
             findings_by_layer[finding.layer].append(finding)
 
-        # Calcola score per ogni layer
+        # Calcola score per ogni layer attivo
         layer_scores: dict[str, LayerScore] = {}
         for layer in Layer:
+            if layer.value not in self.profile.layer_weights and not findings_by_layer[layer]:
+                continue
             layer_score = self.score_layer(layer, findings_by_layer[layer])
             layer_scores[layer.value] = layer_score
 

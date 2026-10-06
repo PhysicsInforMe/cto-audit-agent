@@ -85,6 +85,24 @@ Per mantenere massima distanza dal patent US Provisional (vedi [PATENT_ANALYSIS.
 
 ---
 
+## Fase 2.5 — Due Diligence (COMPLETATA, ottobre 2026)
+
+**Obiettivo**: usare il tool per conto di un terzo (investitore, acquirente, partner) che deve capire cosa compra.
+
+| Componente | Dettaglio |
+|------------|-----------|
+| Layer Provenance (IP & licenze) | 8 regole + 2 info: licenza/copyright, dipendenze copyleft e commerciali, codice vendorizzato, copyright di terzi, claims del README, certificazioni dichiarate, SBOM |
+| Layer Team (continuita) | 7 regole + 2 info: bus factor, inattivita, storico compresso, storico minimo, tag, messaggi di commit, commit co-firmati da AI |
+| GitHistoryCollector | Solo metadati git aggregati, nessun nome ne email nel risultato |
+| LicenseChecker | KB offline verificata sui registri + lookup PyPI/npm dietro consenso rete |
+| Profilo `due-diligence` | 6 layer, pesi per conseguenza sul deal |
+| Report di due diligence | Deal flag, inventario asset, red/yellow flag, claims vs evidenze, costo di remediation, domande per il management |
+| Bug fix | `.gitignore` con pattern annidati e ancorati in `LocalRepoSource` |
+
+**Patent safety**: il layer Team legge solo lo storico git del repository analizzato (metadati locali, prior art: `git log`), nessuna fonte esterna su team, funding o mercato, quindi resta fuori dal confine "Market/Financial Agent". Il bus factor applica una metrica pubblicata (Avelino et al., ICPC 2016). Il check licenze e deterministico (classificazione per stringa SPDX, prior art: license scanner). Nessun LLM nel core.
+
+---
+
 ## Fase 3 — Multi-Source & Ecosystem (Q3-Q4 2026)
 
 **Obiettivo**: fonti multiple, report professionali, integrazioni CI/CD.
@@ -314,5 +332,5 @@ Strategia di monetizzazione: core open source + feature premium.
 
 ---
 
-*Ultimo aggiornamento: Marzo 2026*
+*Ultimo aggiornamento: Ottobre 2026*
 *Per l'analisi patent dettagliata vedi [PATENT_ANALYSIS.md](PATENT_ANALYSIS.md)*

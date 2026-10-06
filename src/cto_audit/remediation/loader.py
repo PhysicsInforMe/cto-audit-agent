@@ -92,6 +92,32 @@ class RemediationLoader:
 
         return cls(entries)
 
+    @classmethod
+    def load_all(cls, kb_dir: Path | None = None) -> RemediationLoader:
+        """
+        Carica e unisce tutte le KB YAML presenti nella directory.
+
+        `default.yml` viene caricata per prima; le altre (es. `due-diligence.yml`)
+        aggiungono le entry dei layer opzionali. In caso di rule_id duplicato
+        vince il file caricato per ultimo (ordine alfabetico dopo default).
+
+        Returns:
+            RemediationLoader con l'unione delle entry
+        """
+        if kb_dir is None:
+            from cto_audit._data import get_data_dir
+            kb_dir = get_data_dir("remediation-kb")
+
+        names = sorted(p.stem for p in kb_dir.glob("*.yml"))
+        if "default" in names:
+            names.remove("default")
+            names.insert(0, "default")
+
+        merged: dict[str, RemediationEntry] = {}
+        for name in names:
+            merged.update(cls.from_yaml(name, kb_dir=kb_dir).all_entries())
+        return cls(merged)
+
     def get(self, rule_id: str) -> RemediationEntry | None:
         """Restituisce l'entry per il rule_id, o None."""
         return self._entries.get(rule_id)

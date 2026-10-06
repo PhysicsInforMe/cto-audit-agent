@@ -1,0 +1,450 @@
+# Profilo Due Diligence — CTO Audit Agent
+#
+# Pensato per chi valuta il codice di un terzo per conto di un investitore,
+# un acquirente o un partner: la domanda non e "quanto e ben fatto" ma
+# "quanto vale, di chi e, e cosa succede se il team se ne va".
+#
+# Attiva 6 layer: ai 4 storici aggiunge PROVENANCE (IP, licenze, provenienza
+# del codice) e TEAM (continuita di sviluppo, bus factor, storico git).
+#
+# Pesi: ragionati per CONSEGUENZA sul deal, non per frequenza.
+#
+# Security 0.25: un breach o una CVE nota pre-closing resta il rischio
+#   piu costoso (IBM/Ponemon 2025, gia citato nel profilo default).
+# Provenance 0.20: una dipendenza AGPL in un prodotto proprietario, o codice
+#   di terzi senza cessione dei diritti, blocca la cessione dell'asset.
+#   E un rischio binario: o si risolve prima del closing o cambia il prezzo.
+# Team 0.15: bus factor 1 e repository fermi sono rischi di continuita che
+#   nessun investimento in infrastruttura compensa (Avelino et al. 2016).
+# Architecture 0.15: tech debt = costo nascosto post-investimento (CISQ 2022).
+# Quality 0.15: velocita di iterazione del team che si compra (Stripe 2018).
+# Infra 0.10: recuperabile post-investimento in settimane (DORA 2024).
+
+name: due-diligence
+description: "Profilo Due Diligence — 6 layer: rischio di cessione (IP, licenze), continuita (team, storico git), security"
+
+layer_weights:
+  security: 0.25
+  provenance: 0.20
+  team: 0.15
+  architecture: 0.15
+  quality: 0.15
+  infra: 0.10
+
+default_rule_weight: 0.5
+
+rules:
+  # ============================================================
+  # INFRA — peso layer 0.10
+  # ============================================================
+
+  INFRA-CICD-001:
+    severity: high
+    weight: 0.9
+    penalty: -20
+    framework_ref: "NIST PR.DS-6"
+    description: "Nessun CI/CD pipeline rilevato"
+
+  INFRA-CICD-INFO:
+    severity: info
+    weight: 0.0
+    penalty: 0
+    description: "CI/CD rilevato (informativo)"
+
+  INFRA-DOCKER-001:
+    severity: medium
+    weight: 0.5
+    penalty: -8
+    description: "Nessuna containerizzazione rilevata"
+
+  INFRA-DOCKER-INFO:
+    severity: info
+    weight: 0.0
+    penalty: 0
+    description: "Nessuna containerizzazione (non richiesta per questo tipo di progetto)"
+
+  INFRA-DOCKER-002:
+    severity: low
+    weight: 0.3
+    penalty: -3
+    description: ".dockerignore non presente"
+
+  INFRA-DOCKER-003:
+    severity: medium
+    weight: 0.5
+    penalty: -5
+    description: "Dockerfile senza multi-stage build"
+
+  INFRA-DOCKER-004:
+    severity: medium
+    weight: 0.6
+    penalty: -8
+    description: "Dockerfile esegue come root"
+
+  INFRA-DOCKER-005:
+    severity: low
+    weight: 0.3
+    penalty: -3
+    description: "Dockerfile senza HEALTHCHECK"
+
+  INFRA-IAC-001:
+    severity: high
+    weight: 0.7
+    penalty: -10
+    description: "Nessun Infrastructure as Code rilevato"
+
+  INFRA-DEPS-001:
+    severity: high
+    weight: 0.8
+    penalty: -12
+    framework_ref: "NIS2 Art.21(2)(d)"
+    description: "Nessun lockfile presente"
+
+  INFRA-CONFIG-001:
+    severity: high
+    weight: 0.8
+    penalty: -15
+    description: "File .env con dati sensibili nel repository"
+
+  INFRA-CONFIG-002:
+    severity: high
+    weight: 0.8
+    penalty: -15
+    description: "Secrets rilevati in file di configurazione"
+
+  INFRA-MON-001:
+    severity: medium
+    weight: 0.5
+    penalty: -8
+    framework_ref: "NIS2 Art.21(2)(c)"
+    description: "Nessun monitoraggio rilevato"
+
+  INFRA-ENVEXAMPLE-001:
+    severity: medium
+    weight: 0.4
+    penalty: -5
+    description: ".env.example mancante"
+
+  # ============================================================
+  # ARCHITECTURE — peso layer 0.15
+  # ============================================================
+
+  ARCH-STRUCT-001:
+    severity: medium
+    weight: 0.5
+    penalty: -8
+    description: "Struttura directory flat/caotica"
+
+  ARCH-STRUCT-INFO:
+    severity: info
+    weight: 0.0
+    penalty: 0
+    description: "Pattern architetturale rilevato (informativo)"
+
+  ARCH-COUPLING-001:
+    severity: high
+    weight: 0.8
+    penalty: -15
+    description: "Import circolari rilevati"
+
+  ARCH-COUPLING-002:
+    severity: medium
+    weight: 0.5
+    penalty: -5
+    description: "Fan-out eccessivo"
+
+  ARCH-COUPLING-INFO:
+    severity: info
+    weight: 0.0
+    penalty: 0
+    description: "Fan-out elevato (informativo, oltre il cap normalizzato)"
+
+  ARCH-SCALE-001:
+    severity: medium
+    weight: 0.4
+    penalty: -3
+    description: "File molto grande (>500 LOC)"
+
+  ARCH-SCALE-INFO:
+    severity: info
+    weight: 0.0
+    penalty: 0
+    description: "File grande (informativo, oltre il cap normalizzato)"
+
+  # In due diligence l'assenza di test pesa come nel default: e il primo
+  # indicatore che il codice non e verificabile da chi lo compra.
+  ARCH-TEST-001:
+    severity: critical
+    weight: 1.0
+    penalty: -25
+    description: "Nessuna directory o file di test rilevati"
+
+  ARCH-DB-001:
+    severity: medium
+    weight: 0.5
+    penalty: -8
+    description: "ORM rilevato ma nessuna gestione migrazioni"
+
+  # ============================================================
+  # SECURITY — peso layer 0.25 (penalita come vc-diligence)
+  # ============================================================
+
+  SEC-DEPS-001:
+    severity: high
+    weight: 0.9
+    penalty: -15
+    framework_ref: "NIS2 Art.21(2)(d)"
+    description: "Dipendenze con versioni notoriamente vulnerabili (check statico)"
+
+  SEC-DEPS-CVE-001:
+    severity: high
+    weight: 0.9
+    penalty: -18
+    framework_ref: "NIS2 Art.21(2)(d)"
+    description: "CVE note trovate nelle dipendenze (fonte: Google OSV)"
+
+  SEC-AUTH-001:
+    severity: high
+    weight: 0.9
+    penalty: -18
+    framework_ref: "NIST PR.AC-1"
+    description: "Nessun framework di autenticazione rilevato"
+
+  SEC-HTTPS-001:
+    severity: medium
+    weight: 0.5
+    penalty: -5
+    framework_ref: "NIST PR.DS-2"
+    description: "URL HTTP non cifrati nel codice"
+
+  SEC-CORS-001:
+    severity: medium
+    weight: 0.5
+    penalty: -5
+    framework_ref: "OWASP A01:2021"
+    description: "CORS permissivo (* origins)"
+
+  SEC-SQL-001:
+    severity: critical
+    weight: 1.0
+    penalty: -22
+    framework_ref: "OWASP A03:2021"
+    description: "Possibile SQL Injection via string concat"
+
+  SEC-SECRETS-CODE-001:
+    severity: critical
+    weight: 1.0
+    penalty: -30
+    framework_ref: "NIST PR.DS-5"
+    description: "Secrets hardcodati nel codice sorgente"
+
+  SEC-HEADERS-001:
+    severity: low
+    weight: 0.3
+    penalty: -3
+    framework_ref: "OWASP A05:2021"
+    description: "Nessun middleware per security headers"
+
+  SEC-CRYPTO-001:
+    severity: medium
+    weight: 0.7
+    penalty: -10
+    framework_ref: "NIST PR.DS-5"
+    description: "Pattern crittografici deboli (MD5, SHA1, DES, RC4)"
+
+  # ============================================================
+  # QUALITY — peso layer 0.15
+  # ============================================================
+
+  QUAL-DOC-001:
+    severity: medium
+    weight: 0.5
+    penalty: -8
+    description: "Nessun README nella root del progetto"
+
+  QUAL-DOC-002:
+    severity: low
+    weight: 0.3
+    penalty: -3
+    description: "Documentazione inline insufficiente"
+
+  QUAL-LINT-001:
+    severity: medium
+    weight: 0.5
+    penalty: -8
+    framework_ref: "NIS2 Art.21(2)(a)"
+    description: "Nessun linter o formatter configurato"
+
+  QUAL-TYPING-001:
+    severity: low
+    weight: 0.3
+    penalty: -3
+    description: "Nessun type checking configurato"
+
+  QUAL-COMPLEXITY-001:
+    severity: medium
+    weight: 0.5
+    penalty: -7
+    description: "Codice eccessivamente annidato"
+
+  QUAL-DUP-001:
+    severity: low
+    weight: 0.3
+    penalty: -3
+    description: "File con nome identico in directory diverse (copy-paste)"
+
+  QUAL-PRECOMMIT-001:
+    severity: medium
+    weight: 0.4
+    penalty: -5
+    description: "Nessun pre-commit hook configurato"
+
+  QUAL-EDITORCONFIG-001:
+    severity: low
+    weight: 0.2
+    penalty: -2
+    description: "Nessun .editorconfig presente"
+
+  QUAL-CONTRIBUTING-001:
+    severity: low
+    weight: 0.2
+    penalty: -2
+    description: "Nessun CONTRIBUTING.md presente"
+
+  QUAL-CHANGELOG-001:
+    severity: low
+    weight: 0.2
+    penalty: -2
+    description: "Nessun CHANGELOG presente"
+
+  # ============================================================
+  # PROVENANCE — peso layer 0.20 (nuovo: IP, licenze, provenienza)
+  # ============================================================
+
+  # Senza una dichiarazione di diritti il codice non ha un titolare esplicito.
+  PROV-LICENSE-001:
+    severity: medium
+    weight: 0.5
+    penalty: -8
+    description: "Nessuna dichiarazione di licenza o copyright nel repository"
+
+  # GPL/AGPL/SSPL in un prodotto proprietario: obbligo di rilascio sorgente o
+  # licenza commerciale. Rischio binario sulla cessione: penalita massima del layer.
+  PROV-COPYLEFT-001:
+    severity: high
+    weight: 1.0
+    penalty: -30
+    description: "Dipendenze con licenza copyleft forte (GPL, AGPL, SSPL)"
+
+  PROV-COPYLEFT-002:
+    severity: low
+    weight: 0.3
+    penalty: -3
+    description: "Dipendenze con licenza copyleft debole (LGPL, MPL, EPL)"
+
+  # Licenze commerciali o 'SEE LICENSE IN': servono contratti validi e trasferibili.
+  PROV-COMMERCIAL-001:
+    severity: medium
+    weight: 0.7
+    penalty: -12
+    description: "Dipendenze con licenza commerciale o non standard"
+
+  PROV-LICENSE-INFO:
+    severity: info
+    weight: 0.0
+    penalty: 0
+    description: "Inventario licenze dipendenze (informativo)"
+
+  PROV-VENDORED-001:
+    severity: medium
+    weight: 0.5
+    penalty: -8
+    framework_ref: "NIS2 Art.21(2)(d)"
+    description: "Codice di terze parti incorporato nel repository"
+
+  PROV-COPYRIGHT-001:
+    severity: medium
+    weight: 0.6
+    penalty: -10
+    description: "Header di copyright intestati a piu titolari diversi"
+
+  # Documentazione aspirazionale: ogni claim non riscontrato va dimostrato.
+  PROV-CLAIMS-001:
+    severity: medium
+    weight: 0.5
+    penalty: -8
+    description: "Dichiarazioni del README non riscontrate nel codice"
+
+  PROV-CERT-INFO:
+    severity: info
+    weight: 0.0
+    penalty: 0
+    description: "Certificazioni dichiarate non verificabili dal codice (informativo)"
+
+  PROV-SBOM-001:
+    severity: low
+    weight: 0.3
+    penalty: -3
+    framework_ref: "NIS2 Art.21(2)(d)"
+    description: "Nessun SBOM (CycloneDX/SPDX) nel repository"
+
+  # ============================================================
+  # TEAM — peso layer 0.15 (nuovo: continuita di sviluppo)
+  # ============================================================
+
+  TEAM-GIT-INFO:
+    severity: info
+    weight: 0.0
+    penalty: 0
+    description: "Storico git non disponibile o troncato (informativo)"
+
+  # Truck factor 1 (Avelino et al., ICPC 2016): l'uscita di una persona
+  # incapacita il progetto. Penalita massima del layer.
+  TEAM-BUSFACTOR-001:
+    severity: high
+    weight: 1.0
+    penalty: -30
+    description: "Bus factor 1: un solo autore o concentrazione >=80% dei commit"
+
+  TEAM-ACTIVITY-001:
+    severity: high
+    weight: 0.9
+    penalty: -25
+    description: "Repository inattivo da oltre 180 giorni"
+
+  TEAM-ACTIVITY-002:
+    severity: medium
+    weight: 0.6
+    penalty: -10
+    description: "Nessun commit da 90 a 180 giorni"
+
+  # Codice arrivato in blocco: la provenienza va dimostrata.
+  TEAM-HISTORY-001:
+    severity: medium
+    weight: 0.6
+    penalty: -10
+    description: "Storico compresso: >=60% delle righe in 3 commit"
+
+  TEAM-HISTORY-002:
+    severity: low
+    weight: 0.4
+    penalty: -5
+    description: "Storico minimo (<5 commit): continuita non valutabile"
+
+  TEAM-RELEASE-001:
+    severity: low
+    weight: 0.3
+    penalty: -3
+    description: "Nessun tag di release con >=100 commit"
+
+  TEAM-MSGQUAL-001:
+    severity: low
+    weight: 0.3
+    penalty: -3
+    description: "Messaggi di commit generici in >=40% dei casi"
+
+  TEAM-AIGEN-INFO:
+    severity: info
+    weight: 0.0
+    penalty: 0
+    description: "Quota di commit co-firmati da assistenti AI (informativo)"

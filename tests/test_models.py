@@ -516,12 +516,14 @@ class TestEnumerazioni:
         assert values == ["critical", "high", "medium", "low", "info"]
 
     def test_layer_valori(self):
-        """Layer ha tutti i 4 valori."""
-        assert len(Layer) == 4
+        """Layer ha i 4 valori storici piu i 2 di due diligence."""
+        assert len(Layer) == 6
         assert Layer.INFRA.value == "infra"
         assert Layer.ARCHITECTURE.value == "architecture"
         assert Layer.SECURITY.value == "security"
         assert Layer.QUALITY.value == "quality"
+        assert Layer.PROVENANCE.value == "provenance"
+        assert Layer.TEAM.value == "team"
 
     def test_compliance_mode_valori(self):
         """ComplianceMode ha tutti i 3 valori."""

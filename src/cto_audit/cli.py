@@ -64,7 +64,7 @@ def scan(
     focus: Optional[str] = typer.Option(
         None,
         "--focus", "-f",
-        help="Esegui solo un layer specifico: infra, architecture, security, quality",
+        help="Esegui solo un layer specifico: infra, architecture, security, quality, provenance, team",
     ),
     compliance: Optional[str] = typer.Option(
         None,
@@ -79,7 +79,16 @@ def scan(
     scoring: str = typer.Option(
         "default",
         "--scoring", "-s",
-        help="Profilo di scoring da usare (es. default, nist-csf, owasp-asvs)",
+        help="Profilo di scoring da usare: default, vc-diligence, due-diligence",
+    ),
+    due_diligence: bool = typer.Option(
+        False,
+        "--due-diligence", "--dd",
+        help=(
+            "Modalita due diligence: profilo 'due-diligence' (6 layer, inclusi Provenienza & IP e "
+            "Team & Continuita), pipeline remediation per le stime di effort, e report dedicato "
+            "per investitore/acquirente quando --output e un file .md"
+        ),
     ),
     offline: bool = typer.Option(
         False,
@@ -131,6 +140,12 @@ def scan(
     # Console creata qui (non a livello di modulo) per compatibilità
     # con CliRunner che sostituisce sys.stdout a runtime
     console = Console()
+
+    # --- Modalita due diligence: profilo a 6 layer + remediation pipeline ---
+    if due_diligence:
+        if scoring == "default":
+            scoring = "due-diligence"
+        board_report = True
 
     # --- Tag → branch (alias) ---
     ref = branch or tag
@@ -267,10 +282,15 @@ def scan(
         elif ext == ".html":
             from cto_audit.reporters.html import HTMLReporter
             HTMLReporter(detailed=detailed).save(result, output_path, delta=delta)
+        elif due_diligence:
+            from cto_audit.remediation.loader import RemediationLoader
+            from cto_audit.reporters.due_diligence import DueDiligenceReporter
+            kb = RemediationLoader.load_all()
+            DueDiligenceReporter(kb_loader=kb).save(result, output_path)
         elif board_report:
             from cto_audit.remediation.loader import RemediationLoader
             from cto_audit.reporters.board import BoardReporter
-            kb = RemediationLoader.from_yaml()
+            kb = RemediationLoader.load_all()
             board_reporter = BoardReporter(kb_loader=kb)
             board_reporter.save(result, output_path)
         else:

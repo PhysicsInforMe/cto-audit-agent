@@ -18,8 +18,11 @@ from typing import Optional
 
 from cto_audit.analyzers.architecture import ArchitectureAnalyzer
 from cto_audit.analyzers.infra import InfraAnalyzer
+from cto_audit.analyzers.provenance import ProvenanceAnalyzer
 from cto_audit.analyzers.quality import QualityAnalyzer
 from cto_audit.analyzers.security import SecurityAnalyzer
+from cto_audit.analyzers.team import TeamAnalyzer
+from cto_audit.collectors.git_history import GitHistoryCollector
 from cto_audit.collectors.privacy import PrivacyClassifier
 from cto_audit.collectors.project_type import ProjectTypeDetector
 from cto_audit.collectors.nlp_classifier import enhance_with_nlp
@@ -31,6 +34,7 @@ from cto_audit.core.models import (
     AuditResult,
     FileClassification,
     Finding,
+    GitSummary,
     HealthScore,
     Layer,
     ProjectTypeResult,
@@ -70,6 +74,7 @@ class AuditOrchestrator:
         no_llm: bool = False,
         compliance_profiles: Optional[list[str]] = None,
         previous_result: Optional[AuditResult] = None,
+        llm_router: Optional[object] = None,
     ) -> None:
         self.source = source
         self.target_path = target_path
@@ -83,7 +88,11 @@ class AuditOrchestrator:
         self.no_llm = no_llm
         self.compliance_profiles = compliance_profiles or []
         self.previous_result = previous_result
+        self._llm_router = llm_router
         self._network_consented: bool | None = None
+        self._git_summary: GitSummary | None = None
+        self._dependency_licenses: list[dict] = []
+        self._profile = None
 
     def run(self) -> AuditResult:
         """
@@ -127,11 +136,12 @@ class AuditOrchestrator:
                 return self._empty_result(stack_info=stack_info, classifications=classifications)
             persistence.save(classifications, overrides=overrides)
 
-        # --- Fase 4: Analisi per layer ---
+        # --- Fase 4: Analisi per layer (solo i layer pesati dal profilo) ---
+        profile = load_profile(self.scoring_profile)
+        self._profile = profile
         all_findings = self._run_analyzers(stack_info, classifications)
 
         # --- Fase 5: Scoring ---
-        profile = load_profile(self.scoring_profile)
         engine = ScoringEngine(
             profile,
             project_type=project_type_result.detected_type,
@@ -162,6 +172,7 @@ class AuditOrchestrator:
             network_consented=self._network_consented,
             project_type=project_type_result.detected_type.value,
             project_type_confidence=project_type_result.confidence,
+            active_layers=[layer.value for layer in self._active_layers()],
         )
 
         result = AuditResult(
@@ -169,6 +180,8 @@ class AuditOrchestrator:
             stack_info=stack_info,
             classifications=classifications,
             metadata=metadata,
+            git_summary=self._git_summary,
+            dependency_licenses=self._dependency_licenses,
         )
 
         # --- Fase 6: Remediation Pipeline (se board_report attivo) ---
@@ -193,7 +206,7 @@ class AuditOrchestrator:
         from cto_audit.remediation.models import RemediationPipelineResult
 
         # 1. Carica KB
-        kb = RemediationLoader.from_yaml()
+        kb = RemediationLoader.load_all()
 
         # 2. Raccogli contesto
         context = ContextCollector().collect(result)
@@ -209,26 +222,51 @@ class AuditOrchestrator:
             result.health_score, effort_map
         )
 
-        # 5. LLM interpretation (se non disabilitato)
+        # 5. LLM interpretation: solo con un revisore umano che approva l'output.
+        #    Regola: nessun testo generato da LLM entra in un report senza
+        #    approvazione esplicita. Senza revisore (--auto-approve, agent mode)
+        #    o con --no-llm si usa il template deterministico.
         executive_summary: str | None = None
         risk_narrative: str | None = None
         llm_used = False
+        llm_hitl_approved: bool | None = None
+        llm_skipped_reason: str | None = None
 
-        if not self.no_llm:
+        from cto_audit.llm.agent import InterpretationAgent
+        from cto_audit.llm.router import LLMRouter
+
+        if self.no_llm or self.auto_approve:
+            if self.no_llm:
+                llm_skipped_reason = "LLM disabilitato (--no-llm): narrativa da template deterministico"
+            else:
+                llm_skipped_reason = (
+                    "nessun revisore umano disponibile (--auto-approve): l'output LLM richiede "
+                    "approvazione, quindi si usa il template deterministico"
+                )
+            # Router senza provider: l'agente produce la narrativa da template
+            fallback_agent = InterpretationAgent(LLMRouter(providers=[]), kb)
+            interpretation = fallback_agent.interpret(result, whatif, context, delta=delta)
+            executive_summary = interpretation.executive_summary
+            risk_narrative = interpretation.risk_narrative
+        else:
             try:
-                from cto_audit.llm.agent import InterpretationAgent
-                from cto_audit.llm.router import LLMRouter
-
-                router = LLMRouter()
-                agent = InterpretationAgent(router, kb)
+                router = self._llm_router if self._llm_router is not None else LLMRouter()
+                agent = InterpretationAgent(
+                    router, kb,
+                    hitl_enabled=True,
+                    hitl_input_fn=self._llm_approval_input,
+                )
                 interpretation = agent.interpret(result, whatif, context, delta=delta)
 
                 executive_summary = interpretation.executive_summary
                 risk_narrative = interpretation.risk_narrative
                 llm_used = interpretation.llm_used
+                llm_hitl_approved = interpretation.hitl_approved
+                if interpretation.hitl_approved is False:
+                    llm_skipped_reason = "output LLM rifiutato dal revisore: narrativa da template deterministico"
             except Exception:
                 # Graceful degradation: se LLM fallisce, continua senza
-                pass
+                llm_skipped_reason = "errore LLM: narrativa da template deterministico"
 
         return RemediationPipelineResult(
             context=context,
@@ -236,7 +274,27 @@ class AuditOrchestrator:
             executive_summary=executive_summary,
             risk_narrative=risk_narrative,
             llm_used=llm_used,
+            llm_hitl_approved=llm_hitl_approved,
+            llm_skipped_reason=llm_skipped_reason,
         )
+
+    def _llm_approval_input(self, review_text: str) -> str:
+        """
+        Gate HITL sull'output LLM: mostra il testo generato e chiede approvazione.
+
+        Restituisce la risposta dell'utente; EOF o interruzione valgono come rifiuto.
+        """
+        self.console.print()
+        self.console.print(Panel(
+            review_text.replace("\nApprovare output LLM? [s/n]: ", "").strip(),
+            title="REVISIONE OUTPUT LLM",
+            subtitle="Il testo entra nel report solo se approvato",
+            border_style="magenta",
+        ))
+        try:
+            return self.console.input("\n  Approvare l'output LLM e inserirlo nel report? [s/n]: ")
+        except (EOFError, KeyboardInterrupt):
+            return "n"
 
     def _detect_project_type(self, stack_info: StackInfo) -> ProjectTypeResult:
         """Rileva automaticamente il tipo di progetto."""
@@ -276,11 +334,16 @@ class AuditOrchestrator:
 
         self.console.print()
         self.console.print(Panel(
-            "  Il check CVE invia i seguenti dati alla rete:\n\n"
+            "  Il check CVE e licenze invia i seguenti dati alla rete:\n\n"
             "  [bold]Cosa viene inviato:[/bold]\n"
             "    - Nome e versione dei pacchetti rilevati (es. 'requests 2.31.0')\n\n"
             "  [bold]A chi:[/bold]\n"
-            "    - Google OSV (https://osv.dev) — database vulnerabilita open source\n\n"
+            "    - Google OSV (https://osv.dev) — database vulnerabilita open source\n"
+            + (
+                "    - Registri PyPI (pypi.org) e npm (registry.npmjs.org) — licenze dipendenze\n"
+                if Layer.PROVENANCE in self._active_layers() else ""
+            )
+            + "\n"
             "  [bold]Cosa NON viene inviato:[/bold]\n"
             "    - Codice sorgente\n"
             "    - Percorsi file\n"
@@ -293,7 +356,7 @@ class AuditOrchestrator:
 
         try:
             response = self.console.input(
-                "\n  Acconsenti all'accesso alla rete per il check CVE? [s/n]: "
+                "\n  Acconsenti all'accesso alla rete per il check CVE e licenze? [s/n]: "
             )
             return response.strip().lower() in ("s", "si", "y", "yes")
         except (EOFError, KeyboardInterrupt):
@@ -316,23 +379,54 @@ class AuditOrchestrator:
             security_offline = not consented
             self._network_consented = consented
 
+        active = self._active_layers()
+
+        # Storico git: letto una volta sola, solo se serve ai layer di due diligence
+        if Layer.TEAM in active or Layer.PROVENANCE in active:
+            self._git_summary = GitHistoryCollector(self._resolve_root()).collect()
+
+        provenance = ProvenanceAnalyzer(offline=security_offline)
+
         # Mappa layer → analyzer disponibili
         analyzers: dict[Layer, object] = {
             Layer.INFRA: InfraAnalyzer(),
             Layer.ARCHITECTURE: ArchitectureAnalyzer(),
             Layer.SECURITY: SecurityAnalyzer(offline=security_offline),
             Layer.QUALITY: QualityAnalyzer(),
+            Layer.PROVENANCE: provenance,
+            Layer.TEAM: TeamAnalyzer(self._git_summary),
         }
 
         for layer, analyzer in analyzers.items():
-            # Skip se focus è attivo e non è questo layer
-            if self.focus is not None and self.focus != layer:
+            if layer not in active:
                 continue
 
             findings = analyzer.analyze(self.source, stack_info, classifications)
             all_findings.extend(findings)
 
+        if Layer.PROVENANCE in active:
+            self._dependency_licenses = [dl.to_dict() for dl in provenance.dependency_licenses]
+
         return all_findings
+
+    def _active_layers(self) -> list[Layer]:
+        """
+        Layer da analizzare: quelli pesati dal profilo di scoring, oppure solo
+        il layer indicato da --focus. Senza profilo caricato (fallback) i 4 layer storici.
+        """
+        if self.focus is not None:
+            return [self.focus]
+        if self._profile is None:
+            return [Layer.INFRA, Layer.ARCHITECTURE, Layer.SECURITY, Layer.QUALITY]
+        return [layer for layer in Layer if layer.value in self._profile.layer_weights]
+
+    def _resolve_root(self) -> Path:
+        """Directory locale su cui eseguire git (sorgente locale o clone temporaneo)."""
+        root = getattr(self.source, "root", None)
+        if root is None:
+            inner = getattr(self.source, "_local_source", None)
+            root = getattr(inner, "root", None)
+        return Path(root) if root is not None else self.target_path
 
     def _empty_result(
         self,

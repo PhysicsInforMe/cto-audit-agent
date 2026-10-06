@@ -54,3 +54,7 @@ docs/TESTER_GUIDE.html
 
 # Pitch deck (local only)
 pitch/
+
+# Output del tool quando viene eseguito su questo stesso repository
+.cto-audit/
+.cto-audit-classification.yml

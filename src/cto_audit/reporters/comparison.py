@@ -10,7 +10,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from cto_audit.core.models import AuditResult, Severity
+from cto_audit.core.models import LAYER_ORDER, AuditResult, Severity
 
 
 LAYER_NAMES: dict[str, str] = {
@@ -18,6 +18,8 @@ LAYER_NAMES: dict[str, str] = {
     "architecture": "Architettura",
     "security": "Sicurezza",
     "quality": "Qualita Codice",
+    "provenance": "Provenienza & IP",
+    "team": "Team & Continuita",
 }
 
 
@@ -95,7 +97,7 @@ class ComparisonReporter:
         ]
 
         all_layers = set(before.health_score.layer_scores.keys()) | set(after.health_score.layer_scores.keys())
-        for layer_name in ["infra", "architecture", "security", "quality"]:
+        for layer_name in LAYER_ORDER:
             if layer_name not in all_layers:
                 continue
             display = LAYER_NAMES.get(layer_name, layer_name)

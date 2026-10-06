@@ -110,7 +110,7 @@ class LocalRepoSource:
             dirnames[:] = [
                 d for d in sorted(dirnames)
                 if not self._is_ignored(
-                    os.path.join(rel_dir, d) + "/" if rel_dir else d + "/"
+                    (os.path.join(rel_dir, d) if rel_dir else d).replace("\\", "/") + "/"
                 )
             ]
 
@@ -246,19 +246,25 @@ class LocalRepoSource:
 
         return patterns
 
-    def _compile_patterns(self) -> list[tuple[str, re.Pattern[str], bool]]:
+    def _compile_patterns(self) -> list[tuple[str, re.Pattern[str], bool, bool]]:
         """
         Pre-compila i pattern gitignore in regex per performance.
 
         Returns:
-            Lista di (pattern_originale, regex_compilata, is_dir_only)
+            Lista di (pattern_pulito, regex_compilata, is_dir_only, path_based)
         """
         compiled = []
         for pattern in self._gitignore_patterns:
             is_dir_only = pattern.endswith("/")
-            clean = pattern.rstrip("/")
+            anchored = pattern.startswith("/")
+            # Un pattern ancorato alla root ("/dist") o con path annidato
+            # ("benchmarks/repos/") va confrontato con il percorso relativo
+            # dalla root, non con il singolo componente.
+            clean = pattern.rstrip("/").lstrip("/")
+            if not clean:
+                continue
             regex = re.compile(fnmatch.translate(clean))
-            compiled.append((clean, regex, is_dir_only))
+            compiled.append((clean, regex, is_dir_only, anchored or "/" in clean))
         return compiled
 
     def _is_ignored(self, rel_path: str) -> bool:
@@ -266,9 +272,13 @@ class LocalRepoSource:
         Verifica se un percorso relativo deve essere ignorato.
 
         Controlla prima le regole hardcoded (sempre .git/), poi i pattern
-        dal .gitignore. Supporta pattern glob standard e directory con slash.
-        File critici (requirements.txt, Dockerfile, etc.) non vengono mai ignorati.
-        Usa regex pre-compilate per performance.
+        dal .gitignore. Supporta pattern glob semplici ("*.log"), directory
+        ("node_modules/"), pattern ancorati ("/dist") e path annidati
+        ("benchmarks/repos/").
+
+        I file critici (requirements.txt, Dockerfile, ...) non vengono mai
+        ignorati per nome, ma restano esclusi se stanno dentro una directory
+        ignorata: un setup.py in un clone di benchmark non e del progetto.
 
         Args:
             rel_path: Percorso relativo normalizzato (con / come separatore)
@@ -276,28 +286,45 @@ class LocalRepoSource:
         Returns:
             True se il file/directory deve essere ignorato
         """
-        # .git/ è sempre ignorata
+        # .git/ e sempre ignorata
         if rel_path == ".git/" or rel_path.startswith(".git/"):
             return True
 
-        # File critici per l'analisi non vengono mai ignorati
+        is_dir = rel_path.endswith("/")
         stripped = rel_path.rstrip("/")
-        basename = stripped.rsplit("/", 1)[-1]
-        if not rel_path.endswith("/") and basename in NEVER_IGNORE_FILES:
-            return False
+        parts = stripped.split("/")
+        basename = parts[-1]
+        # Prefissi del percorso: "a", "a/b", "a/b/c"
+        prefixes = ["/".join(parts[:k]) for k in range(1, len(parts) + 1)]
 
-        for _orig, regex, is_dir_only in self._compiled_patterns:
-            if is_dir_only:
-                # Matcha il nome directory in qualsiasi posizione
-                parts = stripped.split("/")
+        # File critici: mai ignorati per nome, ma esclusi se in una directory ignorata
+        if not is_dir and basename in NEVER_IGNORE_FILES:
+            return any(self._prefix_matches(prefix) for prefix in prefixes[:-1])
+
+        for _clean, regex, is_dir_only, path_based in self._compiled_patterns:
+            if path_based:
+                # Pattern con path o ancorato: confronta con il percorso dalla root
+                # e con ogni suo prefisso
+                if any(regex.match(prefix) for prefix in prefixes):
+                    return True
+            elif is_dir_only:
+                # Nome directory in qualsiasi posizione del percorso
                 if any(regex.match(part) for part in parts):
                     return True
             else:
-                # Matcha il nome del file/directory
-                if regex.match(basename):
-                    return True
-                # Matcha anche il percorso completo
-                if regex.match(stripped):
+                # Nome del file/directory, oppure percorso completo
+                if regex.match(basename) or regex.match(stripped):
                     return True
 
+        return False
+
+    def _prefix_matches(self, prefix: str) -> bool:
+        """True se un prefisso di directory e coperto da un pattern .gitignore."""
+        last = prefix.rsplit("/", 1)[-1]
+        for _clean, regex, _is_dir_only, path_based in self._compiled_patterns:
+            if path_based:
+                if regex.match(prefix):
+                    return True
+            elif regex.match(last):
+                return True
         return False

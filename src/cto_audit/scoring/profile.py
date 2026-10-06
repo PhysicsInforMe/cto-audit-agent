@@ -16,6 +16,8 @@ from typing import Any
 import yaml
 from pydantic import BaseModel, Field, field_validator, model_validator
 
+from cto_audit.core.models import Layer
+
 
 class RuleConfig(BaseModel):
     """Configurazione di una singola regola di scoring."""
@@ -56,7 +58,7 @@ class ScoringProfile(BaseModel):
     @classmethod
     def validate_layer_weights(cls, v: dict[str, float]) -> dict[str, float]:
         """Valida che i pesi dei layer siano tra 0 e 1 e sommino a 1.0."""
-        valid_layers = {"infra", "architecture", "security", "quality"}
+        valid_layers = {layer.value for layer in Layer}
         for layer_name, weight in v.items():
             if layer_name not in valid_layers:
                 raise ValueError(

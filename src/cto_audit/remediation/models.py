@@ -64,3 +64,11 @@ class RemediationPipelineResult(BaseModel):
     executive_summary: str | None = None
     risk_narrative: str | None = None
     llm_used: bool = False
+    llm_hitl_approved: bool | None = Field(
+        default=None,
+        description="True se l'output LLM e stato approvato da un revisore umano, False se rifiutato, None se LLM non usato",
+    )
+    llm_skipped_reason: str | None = Field(
+        default=None,
+        description="Motivo per cui l'LLM non e stato interpellato (es. --no-llm, nessun revisore umano)",
+    )

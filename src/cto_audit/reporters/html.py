@@ -13,7 +13,7 @@ from __future__ import annotations
 import html
 from pathlib import Path
 
-from cto_audit.core.models import AuditDelta, AuditResult, Severity
+from cto_audit.core.models import LAYER_ORDER, AuditDelta, AuditResult, Severity
 
 
 _SCORE_LABEL_MAP = [
@@ -28,6 +28,8 @@ LAYER_NAMES: dict[str, str] = {
     "architecture": "Architettura",
     "security": "Sicurezza",
     "quality": "Qualita Codice",
+    "provenance": "Provenienza & IP",
+    "team": "Team & Continuita",
 }
 
 SEVERITY_COLORS: dict[str, str] = {
@@ -208,7 +210,7 @@ class HTMLReporter:
             f"</div>"
         )
 
-        for layer_name in ["infra", "architecture", "security", "quality"]:
+        for layer_name in LAYER_ORDER:
             if layer_name not in result.health_score.layer_scores:
                 continue
             ls = result.health_score.layer_scores[layer_name]
@@ -251,7 +253,7 @@ class HTMLReporter:
 
         # Layer deltas
         lines.append("<table><tr><th>Layer</th><th>Delta</th></tr>")
-        for layer_name in ["infra", "architecture", "security", "quality"]:
+        for layer_name in LAYER_ORDER:
             if layer_name in delta.layer_deltas:
                 ld = delta.layer_deltas[layer_name]
                 ld_sign = "+" if ld > 0 else ""
@@ -286,7 +288,7 @@ class HTMLReporter:
     def _findings_table(self, result: AuditResult) -> str:
         lines = ["<h2>Finding</h2>"]
 
-        for layer_name in ["infra", "architecture", "security", "quality"]:
+        for layer_name in LAYER_ORDER:
             if layer_name not in result.health_score.layer_scores:
                 continue
             ls = result.health_score.layer_scores[layer_name]
@@ -391,7 +393,7 @@ class HTMLReporter:
             "<th>Penalty</th><th>Framework</th></tr>",
         ]
 
-        for layer_name in ["infra", "architecture", "security", "quality"]:
+        for layer_name in LAYER_ORDER:
             if layer_name not in result.health_score.layer_scores:
                 continue
             ls = result.health_score.layer_scores[layer_name]

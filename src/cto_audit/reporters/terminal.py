@@ -14,6 +14,7 @@ Il formato segue il mock del doc 01-concept.
 from __future__ import annotations
 
 from cto_audit.core.models import (
+    LAYER_ORDER,
     AuditDelta,
     AuditResult,
     Finding,
@@ -43,6 +44,8 @@ LAYER_DISPLAY: dict[str, tuple[str, str]] = {
     "architecture": ("ARCHITETTURA", "bold"),
     "security": ("SICUREZZA", "bold"),
     "quality": ("QUALITA CODICE", "bold"),
+    "provenance": ("PROVENIENZA & IP", "bold"),
+    "team": ("TEAM & CONTINUITA", "bold"),
 }
 
 
@@ -182,7 +185,7 @@ class TerminalReporter:
         table.add_column("Stato", min_width=12)
         table.add_column("Finding", justify="right", min_width=8)
 
-        for layer_name in ["infra", "architecture", "security", "quality"]:
+        for layer_name in LAYER_ORDER:
             if layer_name not in health.layer_scores:
                 continue
 
@@ -273,7 +276,7 @@ class TerminalReporter:
         ]
 
         # Layer deltas
-        for layer_name in ["infra", "architecture", "security", "quality"]:
+        for layer_name in LAYER_ORDER:
             if layer_name in delta.layer_deltas:
                 ld = delta.layer_deltas[layer_name]
                 layer_sign = "+" if ld > 0 else ""
@@ -310,7 +313,7 @@ class TerminalReporter:
         self.console.print()
         self.console.print("[bold]Catena di Evidenze:[/bold]")
 
-        for layer_name in ["infra", "architecture", "security", "quality"]:
+        for layer_name in LAYER_ORDER:
             if layer_name not in health.layer_scores:
                 continue
 

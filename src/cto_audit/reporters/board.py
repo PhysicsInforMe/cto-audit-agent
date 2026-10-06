@@ -18,6 +18,7 @@ from __future__ import annotations
 from pathlib import Path
 
 from cto_audit.core.models import (
+    LAYER_ORDER,
     AuditResult,
     Severity,
 )
@@ -31,6 +32,8 @@ LAYER_NAMES: dict[str, str] = {
     "architecture": "Architettura",
     "security": "Sicurezza",
     "quality": "Qualita Codice",
+    "provenance": "Provenienza & IP",
+    "team": "Team & Continuita",
 }
 
 MATURITY_LABELS: dict[str, str] = {
@@ -304,7 +307,7 @@ class BoardReporter:
         lines.append("| Layer | Score | Finding |")
         lines.append("|-------|-------|---------|")
 
-        for layer_name in ["infra", "architecture", "security", "quality"]:
+        for layer_name in LAYER_ORDER:
             if layer_name not in result.health_score.layer_scores:
                 continue
             ls = result.health_score.layer_scores[layer_name]
@@ -325,7 +328,7 @@ class BoardReporter:
             lines.append("| Rule ID | Layer | Weight | Penalty | Framework |")
             lines.append("|---------|-------|--------|---------|-----------|")
 
-            for layer_name in ["infra", "architecture", "security", "quality"]:
+            for layer_name in LAYER_ORDER:
                 if layer_name not in result.health_score.layer_scores:
                     continue
                 ls = result.health_score.layer_scores[layer_name]
@@ -407,7 +410,7 @@ class BoardReporter:
         meta = result.metadata
         llm_note = ""
         if hasattr(result, "remediation") and result.remediation and result.remediation.llm_used:
-            llm_note = " (con analisi LLM)"
+            llm_note = " (con analisi LLM approvata dal revisore)"
         return (
             "---\n\n"
             f"*Board Report generato da CTO Audit Agent v{meta.tool_version} "

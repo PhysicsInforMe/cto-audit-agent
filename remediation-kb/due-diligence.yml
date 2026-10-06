@@ -1,0 +1,254 @@
+# Remediation Knowledge Base — due-diligence
+#
+# Entry per le regole dei layer PROVENANCE e TEAM (profilo di scoring due-diligence).
+# Caricata insieme a default.yml da RemediationLoader.load_all().
+# Le ore stimate coprono il lavoro tecnico, non le attivita legali (licenze, cessioni).
+
+# ==============================================================
+# PROVENANCE — Layer 5 (due diligence: IP, licenze, provenienza)
+# ==============================================================
+
+PROV-LICENSE-001:
+  risk_business: >
+    Senza un file LICENSE o una nota di copyright non e esplicito chi detiene
+    i diritti sul codice ne a quali condizioni possa essere usato o ceduto.
+    In una cessione o in un round l'acquirente chiedera comunque la prova di
+    titolarita: meglio averla scritta prima.
+  remediation_steps:
+    - "Aggiungere un file LICENSE con la nota di copyright della societa (o la licenza open source scelta)"
+    - "Inserire la stessa nota nel README e, se richiesto dal legale, negli header dei file"
+    - "Verificare che i contratti di dipendenti e fornitori contengano la cessione dei diritti sul codice"
+  effort_range:
+    min_hours: 1
+    max_hours: 4
+    t_shirt: "XS"
+  priority_tier: 2
+
+PROV-COPYLEFT-001:
+  risk_business: >
+    Una dipendenza GPL o AGPL in un prodotto proprietario puo obbligare a
+    rilasciare il sorgente (per AGPL anche se il software e solo erogato via
+    rete) oppure richiedere una licenza commerciale. Per un investitore e un
+    rischio binario: va risolto prima del closing o si riflette sul prezzo.
+  remediation_steps:
+    - "Confermare con il legale la licenza effettiva di ogni dipendenza segnalata e la modalita d'uso (linking, distribuzione, SaaS)"
+    - "Sostituire la dipendenza con un'alternativa permissiva, oppure acquistare la licenza commerciale"
+    - "Documentare la decisione nell'inventario licenze (SBOM)"
+  effort_range:
+    min_hours: 8
+    max_hours: 40
+    t_shirt: "L"
+  priority_tier: 1
+  stack_specific:
+    python:
+      remediation_steps:
+        - "Esempi tipici: PyMuPDF (AGPL, alternativa pypdfium2 o licenza Artifex), mysqlclient (GPL, alternativa PyMySQL MIT)"
+        - "Aggiungere pip-licenses in CI per bloccare nuove dipendenze GPL/AGPL"
+    javascript:
+      remediation_steps:
+        - "Aggiungere license-checker (npm) in CI con allowlist di licenze permissive"
+        - "Verificare le licenze 'SEE LICENSE IN' dei componenti UI commerciali"
+
+PROV-COPYLEFT-002:
+  risk_business: >
+    Le licenze LGPL/MPL/EPL impongono obblighi limitati al componente
+    (rilascio delle modifiche al componente, linking dinamico). Non bloccano
+    la cessione, ma vanno tracciate nell'inventario per rispondere alle
+    domande dell'acquirente.
+  remediation_steps:
+    - "Registrare ogni componente weak-copyleft nello SBOM con versione e licenza"
+    - "Verificare di non aver modificato il componente; se si, rilasciare le modifiche come richiesto"
+  effort_range:
+    min_hours: 1
+    max_hours: 4
+    t_shirt: "XS"
+  priority_tier: 3
+
+PROV-COMMERCIAL-001:
+  risk_business: >
+    Componenti con licenza commerciale o 'SEE LICENSE IN' richiedono un
+    contratto valido, pagato e trasferibile all'eventuale acquirente. Senza
+    la prova, il prodotto incorpora software per cui l'azienda potrebbe non
+    avere diritti d'uso.
+  remediation_steps:
+    - "Raccogliere i contratti di licenza per ogni componente segnalato (durata, seat, clausola di cessione)"
+    - "Verificare che la licenza copra l'uso effettivo (produzione, numero di sviluppatori, SaaS)"
+    - "Valutare alternative open source dove il costo di licenza non e giustificato"
+  effort_range:
+    min_hours: 2
+    max_hours: 8
+    t_shirt: "S"
+  priority_tier: 2
+
+PROV-VENDORED-001:
+  risk_business: >
+    Codice di terze parti copiato nel repository non passa dal package manager:
+    licenza, versione e vulnerabilita non sono tracciate e gli aggiornamenti
+    di sicurezza non arrivano. In due diligence e anche un punto interrogativo
+    sulla provenienza.
+  remediation_steps:
+    - "Inventariare ogni directory vendor/third_party con origine, versione e licenza"
+    - "Sostituire con la dipendenza ufficiale via package manager dove possibile"
+    - "Dove la copia e necessaria, aggiungere un file NOTICE con licenza e modifiche locali"
+  effort_range:
+    min_hours: 4
+    max_hours: 16
+    t_shirt: "M"
+  priority_tier: 2
+  references:
+    - "NIS2 Art.21(2)(d)"
+
+PROV-COPYRIGHT-001:
+  risk_business: >
+    Header di copyright intestati a soggetti diversi dalla societa indicano
+    codice ripreso da altri progetti o scritto da collaboratori esterni. Per
+    ogni titolare serve la licenza o la cessione dei diritti, altrimenti la
+    catena di titolarita dell'asset e incompleta.
+  remediation_steps:
+    - "Elencare i titolari di copyright diversi dalla societa e l'origine di ogni file"
+    - "Recuperare licenza o contratto di cessione per ciascuno; dove manca, riscrivere o rimuovere il codice"
+    - "Allineare gli header al titolare corretto"
+  effort_range:
+    min_hours: 4
+    max_hours: 24
+    t_shirt: "M"
+  priority_tier: 1
+
+PROV-CLAIMS-001:
+  risk_business: >
+    Il README dichiara capacita (container, Kubernetes, IaC, CI/CD, test) di
+    cui il repository non contiene traccia. Puo essere documentazione
+    aspirazionale o codice che vive altrove: in entrambi i casi l'acquirente
+    sta valutando qualcosa che non vede.
+  remediation_steps:
+    - "Per ogni dichiarazione non riscontrata: fornire il repository o l'evidenza che la supporta, oppure correggere il README"
+    - "Allineare la documentazione allo stato reale del codice prima della data room"
+  effort_range:
+    min_hours: 1
+    max_hours: 4
+    t_shirt: "XS"
+  priority_tier: 2
+
+PROV-SBOM-001:
+  risk_business: >
+    Senza una Software Bill of Materials l'inventario dei componenti, delle
+    versioni e delle licenze va ricostruito a mano a ogni audit, e le domande
+    di clienti enterprise e regolatori sulla supply chain restano senza una
+    risposta pronta.
+  remediation_steps:
+    - "Generare uno SBOM CycloneDX o SPDX in CI (es. cyclonedx-python, cyclonedx-npm, syft)"
+    - "Pubblicare lo SBOM a ogni release accanto agli artefatti"
+  effort_range:
+    min_hours: 2
+    max_hours: 6
+    t_shirt: "S"
+  priority_tier: 3
+  references:
+    - "NIS2 Art.21(2)(d)"
+
+# ==============================================================
+# TEAM — Layer 6 (due diligence: continuita di sviluppo)
+# ==============================================================
+
+TEAM-BUSFACTOR-001:
+  risk_business: >
+    La conoscenza del sistema e concentrata in una sola persona: la sua uscita
+    incapacita il progetto (truck factor 1, Avelino et al. 2016). Per un
+    investitore e un rischio di continuita che nessuna infrastruttura compensa,
+    e un tema di retention da negoziare prima del closing.
+  remediation_steps:
+    - "Mappare chi conosce ogni area critica del sistema e dove manca una seconda persona"
+    - "Avviare pair programming e code review incrociate sulle aree a conoscenza singola"
+    - "Scrivere la documentazione di architettura e di runbook per le parti critiche"
+    - "Verificare contratti e clausole di permanenza delle persone chiave"
+  effort_range:
+    min_hours: 16
+    max_hours: 80
+    t_shirt: "XL"
+  priority_tier: 1
+
+TEAM-ACTIVITY-001:
+  risk_business: >
+    Oltre sei mesi senza commit: dipendenze non aggiornate, CVE non corrette
+    e il dubbio che il prodotto non sia piu sviluppato. Se lo sviluppo e
+    proseguito altrove, il repository valutato non e quello reale.
+  remediation_steps:
+    - "Chiarire con il management dove e come e proseguito lo sviluppo"
+    - "Aggiornare le dipendenze e rieseguire il check CVE"
+    - "Ripristinare una cadenza di rilascio anche minima"
+  effort_range:
+    min_hours: 8
+    max_hours: 40
+    t_shirt: "L"
+  priority_tier: 1
+
+TEAM-ACTIVITY-002:
+  risk_business: >
+    Tre mesi senza modifiche sono compatibili con una pausa pianificata, ma
+    anche con un rallentamento del team. Va capito quale dei due.
+  remediation_steps:
+    - "Verificare il motivo della pausa (priorita, risorse, altro repository)"
+    - "Pianificare almeno gli aggiornamenti di sicurezza delle dipendenze"
+  effort_range:
+    min_hours: 2
+    max_hours: 8
+    t_shirt: "S"
+  priority_tier: 2
+
+TEAM-HISTORY-001:
+  risk_business: >
+    La maggior parte del codice e arrivata in pochi commit: import da un altro
+    repository, storico riscritto o generazione massiva. Senza la storia non
+    si puo dimostrare dove, quando e da chi e stato sviluppato quel blocco,
+    e la provenienza dell'IP resta da provare.
+  remediation_steps:
+    - "Documentare l'origine del blocco iniziale (repository precedente, autori, licenza)"
+    - "Se esiste uno storico precedente, importarlo o conservarlo come evidenza"
+    - "Da qui in avanti mantenere commit piccoli e tracciabili"
+  effort_range:
+    min_hours: 2
+    max_hours: 8
+    t_shirt: "S"
+  priority_tier: 2
+
+TEAM-HISTORY-002:
+  risk_business: >
+    Con meno di cinque commit non esiste una storia da valutare: continuita,
+    cadenza e distribuzione del lavoro sono sconosciute. Il codice potrebbe
+    essere stato sviluppato altrove.
+  remediation_steps:
+    - "Chiedere dove e stato sviluppato il codice prima e con quale storico"
+    - "Richiedere l'accesso al repository originale per la due diligence"
+  effort_range:
+    min_hours: 1
+    max_hours: 2
+    t_shirt: "XS"
+  priority_tier: 2
+
+TEAM-RELEASE-001:
+  risk_business: >
+    Senza tag o release non si sa quale versione gira in produzione ne si puo
+    ricostruire una build passata. Il processo di rilascio e informale e
+    dipende dalla memoria delle persone.
+  remediation_steps:
+    - "Introdurre versioning semantico e un tag per ogni rilascio"
+    - "Collegare il tag alla pipeline CI/CD per build riproducibili"
+  effort_range:
+    min_hours: 2
+    max_hours: 6
+    t_shirt: "S"
+  priority_tier: 3
+
+TEAM-MSGQUAL-001:
+  risk_business: >
+    Messaggi di commit generici non documentano le decisioni: ogni
+    ricostruzione del perche di una modifica richiede la persona che l'ha
+    fatta. Amplifica il rischio di bus factor.
+  remediation_steps:
+    - "Adottare una convenzione (es. Conventional Commits) e verificarla con un hook"
+    - "Collegare i commit a issue o ticket"
+  effort_range:
+    min_hours: 1
+    max_hours: 4
+    t_shirt: "XS"
+  priority_tier: 3
