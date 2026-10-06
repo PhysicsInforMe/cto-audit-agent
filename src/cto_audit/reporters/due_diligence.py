@@ -289,13 +289,27 @@ class DueDiligenceReporter:
             lines.append("")
             return "\n".join(lines)
         order = {Severity.CRITICAL: 0, Severity.HIGH: 1, Severity.MEDIUM: 2}
-        flagged.sort(key=lambda f: (order.get(f.severity, 9), f.layer.value))
+        # A parita di severita, prima i finding con probabilita di sfruttamento (EPSS) piu alta
+        flagged.sort(key=lambda f: (
+            order.get(f.severity, 9),
+            -float((f.extra.get("epss") or {}).get("max_epss", -1.0)),
+            f.layer.value,
+        ))
         for f in flagged:
             lines.append(f"### [{_sev_tag(f.severity)}] {f.title}")
             lines.append("")
             lines.append(f"`{f.rule_id}` · layer {LAYER_NAMES.get(f.layer.value, f.layer.value)} · confidence {f.confidence:.0%}"
                          + (f" · {f.framework_ref}" if f.framework_ref else ""))
             lines.append("")
+            epss = f.extra.get("epss") if f.extra else None
+            if epss:
+                lines.append(
+                    f"**Probabilita di sfruttamento (FIRST EPSS, {epss.get('date', 'n/d')}):** "
+                    f"CVE piu esposta {epss.get('max_cve')} al {float(epss.get('max_epss', 0)):.0%} "
+                    f"({float(epss.get('max_percentile', 0)):.0%} percentile), "
+                    f"{epss.get('scored_cves', 0)} CVE con punteggio. Dato informativo, non pesa sullo score."
+                )
+                lines.append("")
             lines.append(f.description.strip())
             lines.append("")
             kb = self._kb.get(f.rule_id) if self._kb else None

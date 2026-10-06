@@ -77,7 +77,7 @@ cto-audit project project.yml -o aggregated.json
 |---|---|---|
 | **InfraAnalyzer** | 10 | CI/CD, Docker, IaC, monitoraggio, ambienti, .env.example |
 | **ArchitectureAnalyzer** | 7 | Struttura del progetto, separazione dei layer, dipendenze |
-| **SecurityAnalyzer** | 9 | Segreti hardcoded, dipendenze vulnerabili, CVE check, autenticazione |
+| **SecurityAnalyzer** | 9 | Segreti hardcoded, dipendenze vulnerabili, CVE check con probabilita di sfruttamento EPSS, autenticazione |
 | **QualityAnalyzer** | 10 | Test, linting, documentazione, complessita, pre-commit, editorconfig, contributing, changelog |
 
 Due analyzer aggiuntivi, **ProvenanceAnalyzer** (9 regole) e **TeamAnalyzer** (7 regole), si attivano con il profilo `due-diligence` o con `--focus provenance|team`: vedi [Modalita Due Diligence](#modalita-due-diligence-6-layer).
@@ -276,7 +276,7 @@ python scripts/build_exe.py
 ### Consenso Rete Granulare
 
 - Senza `--offline`, il tool mostra un pannello trasparente prima del check CVE
-- Spiega cosa viene inviato (nome+versione pacchetti), a chi (Google OSV), cosa NO (codice)
+- Spiega cosa viene inviato (nome+versione pacchetti a Google OSV; solo gli ID CVE a FIRST EPSS; solo i nomi dei pacchetti ai registri PyPI/npm in modalita due diligence), cosa NO (codice)
 - L'utente acconsente o rifiuta — se rifiuta, lo scan continua senza CVE
 - `--offline` = nessuna rete senza domande (backward compatible)
 - `--auto-approve` = consenso implicito
@@ -464,7 +464,7 @@ pip install -e ".[dev,ui]"
 pytest
 ```
 
-La suite di test comprende **1.053 test** distribuiti in 58 file, con 7 scenari end-to-end realistici e 3 scenari board report. I 43 test della dashboard richiedono l'extra `ui`.
+La suite di test comprende **1.066 test** distribuiti in 59 file, con 7 scenari end-to-end realistici e 3 scenari board report. I 43 test della dashboard richiedono l'extra `ui`.
 
 ## Documentazione
 

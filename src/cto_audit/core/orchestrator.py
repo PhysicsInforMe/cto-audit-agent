@@ -339,6 +339,7 @@ class AuditOrchestrator:
             "    - Nome e versione dei pacchetti rilevati (es. 'requests 2.31.0')\n\n"
             "  [bold]A chi:[/bold]\n"
             "    - Google OSV (https://osv.dev) — database vulnerabilita open source\n"
+            "    - FIRST EPSS (https://api.first.org) — probabilita di sfruttamento delle CVE trovate (solo ID CVE)\n"
             + (
                 "    - Registri PyPI (pypi.org) e npm (registry.npmjs.org) — licenze dipendenze\n"
                 if Layer.PROVENANCE in self._active_layers() else ""

@@ -26,7 +26,7 @@ Obiettivo: misurare precision e recall dei layer Provenance e Team contro un rif
 
 Criterio di uscita: precision per layer sopra l'80% e nessuna divergenza non spiegata sui deal flag, sul campione.
 
-## Fase B — EPSS per i finding CVE
+## Fase B — EPSS per i finding CVE (COMPLETATA 2026-10-06)
 
 Obiettivo: dare una probabilita di sfruttamento ai finding `SEC-DEPS-CVE-001` usando un dato pubblico gia calibrato, senza modelli propri.
 
@@ -36,6 +36,8 @@ Obiettivo: dare una probabilita di sfruttamento ai finding `SEC-DEPS-CVE-001` us
 4. Test con client httpx finto (stesso pattern di `test_provenance.py`).
 
 Criterio di uscita: una CVE con EPSS alto compare in cima alla lista red flag con la probabilita indicata; con `--offline` il report e identico a oggi.
+
+Implementato in `collectors/epss.py` (query batch, solo ID CVE, degradazione graziosa), `SecurityAnalyzer._check_cve_online` (dipendenze ordinate per EPSS, riepilogo nel campo `Finding.extra['epss']`), report di due diligence (ordinamento a parita di severita e riga EPSS), pannello di consenso rete. Il campo `extra` del Finding e il contenitore generico per le annotazioni che non entrano nello score, incluso il futuro `confirmation_probability` della fase D.
 
 ## Fase C — Raccolta etichette
 

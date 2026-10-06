@@ -169,6 +169,13 @@ class Finding(BaseModel):
         default=None,
         description="Riferimento a framework/normativa (es. 'NIST PR.DS-6')"
     )
+    extra: dict[str, Any] = Field(
+        default_factory=dict,
+        description=(
+            "Annotazioni informative che NON entrano nello score "
+            "(es. 'epss': probabilita di sfruttamento delle CVE da FIRST EPSS)"
+        ),
+    )
 
 
 # --- Modelli Scoring ---

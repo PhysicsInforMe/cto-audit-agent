@@ -595,20 +595,47 @@ class SecurityAnalyzer:
         if not cve_results:
             return []
 
-        # Costruisci finding
-        total_cves = sum(len(r.cve_ids) for r in cve_results)
+        # EPSS: probabilita di sfruttamento per ogni CVE (FIRST). Informativo, non pesa.
+        from cto_audit.collectors.epss import query_epss, summarize
+        all_cves = [c for r in cve_results for c in r.cve_ids]
+        epss_scores = query_epss(all_cves)
+
+        def _max_epss(cves: list[str]) -> float:
+            return max((epss_scores[c].epss for c in cves if c in epss_scores), default=-1.0)
+
+        # Dipendenze ordinate per probabilita di sfruttamento decrescente
+        ordered = sorted(cve_results, key=lambda r: _max_epss(r.cve_ids), reverse=True)
+
+        total_cves = len(all_cves)
         display_lines: list[str] = []
-        for r in cve_results[:10]:
-            cves = ", ".join(r.cve_ids[:3])
+        for r in ordered[:10]:
+            cves_sorted = sorted(r.cve_ids, key=lambda c: epss_scores[c].epss if c in epss_scores else -1.0, reverse=True)
+            parts = []
+            for c in cves_sorted[:3]:
+                if c in epss_scores:
+                    parts.append(f"{c} (EPSS {epss_scores[c].epss:.0%})")
+                else:
+                    parts.append(c)
             more = f" +{len(r.cve_ids) - 3}" if len(r.cve_ids) > 3 else ""
             display_lines.append(
                 f"  - {r.dependency.name} {r.dependency.version} "
-                f"({r.dependency.ecosystem}): {cves}{more}"
+                f"({r.dependency.ecosystem}): {', '.join(parts)}{more}"
             )
 
         more_deps = f"\n  (+{len(cve_results) - 10} altre dipendenze)" if len(cve_results) > 10 else ""
 
-        # Severity basata sul numero di CVE e se ci sono critiche
+        if epss_scores:
+            top = max(epss_scores.values(), key=lambda s: s.epss)
+            epss_text = (
+                f"\n\nProbabilita di sfruttamento (FIRST EPSS, {top.date}): la CVE piu esposta e "
+                f"{top.cve} con {top.epss:.0%} di probabilita di exploit nei prossimi 30 giorni "
+                f"({top.percentile:.0%} percentile). Punteggi disponibili per {len(epss_scores)} CVE su {total_cves}. "
+                "L'EPSS ordina le priorita e non modifica lo score."
+            )
+        else:
+            epss_text = "\n\nProbabilita di sfruttamento (EPSS) non disponibile per questa esecuzione."
+
+        # Severity basata sul numero di CVE (deterministica, invariata)
         severity = Severity.HIGH if total_cves >= 5 else Severity.MEDIUM
 
         return [Finding(
@@ -619,12 +646,14 @@ class SecurityAnalyzer:
             title=f"CVE note nelle dipendenze ({total_cves} vulnerabilita in {len(cve_results)} pacchetti)",
             description=(
                 "Trovate vulnerabilita note (CVE) nelle dipendenze del progetto "
-                "(fonte: Google OSV database):\n"
+                "(fonte: Google OSV database), ordinate per probabilita di sfruttamento:\n"
                 + "\n".join(display_lines)
                 + more_deps
-                + "\n\nAggiornare le dipendenze alle versioni patchate."
+                + epss_text
+                + "\n\nAggiornare le dipendenze alle versioni patchate, partendo da quelle con EPSS piu alto."
             ),
             framework_ref="NIS2 Art.21(2)(d)",
+            extra={"epss": summarize(epss_scores)} if epss_scores else {},
         )]
 
     # --- Check 2: Auth Framework ---

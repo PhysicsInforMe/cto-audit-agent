@@ -25,7 +25,7 @@ Descrive cosa fa ogni componente, le scelte implementative, e come i pezzi si co
 > **Agent Mode**: output JSON headless per container e CI/CD.
 > **Executable**: PyInstaller .exe con supporto `sys._MEIPASS` frozen mode.
 > **Due Diligence (Blocco 17)**: layer Provenance e Team, profilo `due-diligence` a 6 layer,
-> GitHistoryCollector, LicenseChecker, report lato acquirente. 1.053 test (58 file).
+> GitHistoryCollector, LicenseChecker, report lato acquirente. EPSS sulle CVE (Blocco 18). 1.066 test (59 file).
 
 ---
 
@@ -1717,3 +1717,45 @@ I 43 test della dashboard richiedono `dash` installato (`pip install cto-audit[u
 | `test_due_diligence.py` | 23 | Profilo, engine a 4 e 6 layer, orchestrator end-to-end, report, CLI |
 | `test_gitignore_nested.py` | 4 | Regressione pattern annidati, ancorati, con path |
 | `test_llm_hitl.py` | 8 | Gate di approvazione sull'output LLM: approva, rifiuta, headless, --no-llm, etichette nel report |
+
+---
+
+## Blocco 18 — EPSS: probabilita di sfruttamento delle CVE
+
+### Cosa e stato fatto
+
+Il finding `SEC-DEPS-CVE-001` diceva quante CVE ci sono. Ora dice anche quali contano:
+per ogni CVE trovata via OSV il tool chiede a FIRST EPSS la probabilita che venga
+sfruttata in natura nei 30 giorni successivi, ordina le dipendenze per quel valore e
+mette il riepilogo nel nuovo campo `Finding.extra["epss"]`.
+
+### `collectors/epss.py`
+
+- `query_epss(cve_ids)`: GET `https://api.first.org/data/v1/epss?cve=...` a batch di 80 ID
+  (il parametro accetta ID separati da virgola fino a 2000 caratteri), timeout 15 s.
+  Vengono inviati solo gli ID CVE. Errore o offline → dizionario vuoto.
+- `EPSSScore(cve, epss, percentile, date)` e `summarize()` per il campo `extra`.
+
+### `core/models.py` — `Finding.extra`
+
+Dizionario di annotazioni informative che non entrano nello score. Oggi contiene `epss`;
+e il contenitore previsto per il futuro `confirmation_probability` (piano, fase D).
+Lo score resta `max(0, 100 - sum(penalty * weight))`.
+
+### Dove si vede
+
+- Descrizione del finding: dipendenze ordinate per EPSS, CVE piu esposta con probabilita e
+  percentile, data del punteggio, quante CVE hanno un punteggio.
+- Report di due diligence: a parita di severita i finding con EPSS piu alto vengono prima;
+  riga dedicata sotto il finding.
+- Pannello di consenso rete: FIRST EPSS elencato tra i destinatari, con l'indicazione che
+  riceve solo ID CVE.
+
+### Test — `test_epss.py`
+
+Query con `httpx.MockTransport`: parsing, batching, ID non CVE ignorati, errore di rete,
+riepilogo; `SecurityAnalyzer` con OSV ed EPSS mockati: ordinamento, testo, `extra`;
+report DD con riga EPSS e ordinamento.
+
+Fonte: https://www.first.org/epss/ e documentazione API https://api.first.org/epss/ (lette il 2026-10-06).
+
