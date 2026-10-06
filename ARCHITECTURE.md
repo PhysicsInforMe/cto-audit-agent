@@ -25,7 +25,7 @@ Descrive cosa fa ogni componente, le scelte implementative, e come i pezzi si co
 > **Agent Mode**: output JSON headless per container e CI/CD.
 > **Executable**: PyInstaller .exe con supporto `sys._MEIPASS` frozen mode.
 > **Due Diligence (Blocco 17)**: layer Provenance e Team, profilo `due-diligence` a 6 layer,
-> GitHistoryCollector, LicenseChecker, report lato acquirente. 1.035 test (57 file).
+> GitHistoryCollector, LicenseChecker, report lato acquirente. 1.053 test (58 file).
 
 ---
 
@@ -1611,13 +1611,15 @@ inviando solo il nome del pacchetto, dietro lo stesso consenso rete del CVE chec
 | Regola | Severita | Cosa rileva |
 |---|---|---|
 | PROV-LICENSE-001 | medium | Nessun LICENSE/COPYING/NOTICE e nessuna nota di copyright nel README |
+| PROV-OWNLICENSE-INFO | info | Classificazione della licenza del repository stesso (permissiva, copyleft, non standard) |
 | PROV-COPYLEFT-001 | high | Dipendenze GPL/AGPL/SSPL |
 | PROV-COPYLEFT-002 | low | Dipendenze LGPL/MPL/EPL |
 | PROV-COMMERCIAL-001 | medium | Dipendenze con licenza commerciale o non standard |
 | PROV-LICENSE-INFO | info | Inventario licenze: quante classificate, quante ignote |
 | PROV-VENDORED-001 | medium | File sorgente in vendor/, third_party/, external/... |
-| PROV-COPYRIGHT-001 | medium | Header di copyright con 2+ titolari diversi nei sorgenti |
-| PROV-CLAIMS-001 | medium | README dichiara Docker/Kubernetes/IaC/CI/test senza riscontro nel repo |
+| PROV-COPYRIGHT-001 | medium | Header di copyright con 2+ titolari diversi nei sorgenti (progetto senza licenza OSS riconosciuta) |
+| PROV-COPYRIGHT-002 | low | Stesso caso in un progetto open source riconosciuto: titolari multipli attesi |
+| PROV-CLAIMS-001 | low | README dichiara Dockerfile/Helm chart/IaC/CI/test senza riscontro nel repo (le istruzioni d'uso come `docker run` non contano) |
 | PROV-CERT-INFO | info | README dichiara SOC 2, ISO 27001, HIPAA, PCI DSS... (non verificabili dal codice) |
 | PROV-SBOM-001 | low | Nessun file SBOM (CycloneDX/SPDX); framework_ref NIS2 Art.21(2)(d) |
 
@@ -1627,7 +1629,7 @@ Riceve il `GitSummary` dall'orchestrator (nessun accesso al filesystem).
 
 | Regola | Severita | Soglia |
 |---|---|---|
-| TEAM-GIT-INFO | info | Storico non disponibile o shallow |
+| TEAM-GIT-INFO | info | Storico non disponibile o shallow (su clone shallow si valuta solo l'attivita recente) |
 | TEAM-BUSFACTOR-001 | high | Autore unico con >=10 commit, oppure primo autore >=80% con >=20 commit (finestra 12 mesi se popolata, altrimenti storico intero) |
 | TEAM-ACTIVITY-001 | high | Ultimo commit >180 giorni fa |
 | TEAM-ACTIVITY-002 | medium | Ultimo commit tra 90 e 180 giorni fa |
@@ -1652,8 +1654,11 @@ for Estimating Truck Factors*, ICPC 2016 (arXiv:1604.06766).
   temporaneo, `_resolve_root`). Il pannello di consenso rete elenca anche i registri
   PyPI/npm quando Provenance e attivo.
 - `scoring-profiles/due-diligence.yml`: 6 layer, pesi security 0.25, provenance 0.20,
-  team 0.15, architecture 0.15, quality 0.15, infra 0.10; 61 regole.
-- `remediation-kb/due-diligence.yml`: 15 entry (8 PROV + 7 TEAM). `RemediationLoader.load_all()`
+  team 0.15, architecture 0.15, quality 0.15, infra 0.10; 63 regole.
+- `cli.py`: con layer Team attivo (profilo due-diligence o `--focus team`) le sorgenti remote
+  vengono clonate con storico completo (`shallow=False`), altrimenti bus factor e storico
+  sarebbero artefatti del clone.
+- `remediation-kb/due-diligence.yml`: 16 entry (9 PROV + 7 TEAM). `RemediationLoader.load_all()`
   unisce tutte le KB della directory; `from_yaml("default")` resta invariata (37 entry).
 
 ### `reporters/due_diligence.py` — DueDiligenceReporter
@@ -1700,14 +1705,15 @@ di benchmark (oltre 5 minuti); dopo il fix ne legge 172 (1 secondo). Inoltre i f
 "mai ignorati" (`setup.py`, `requirements.txt`, ...) ora restano esclusi se stanno
 dentro una directory ignorata.
 
-### Test — 1.035 totali (57 file; 103 nuovi in 5 file)
+### Test — 1.053 totali (58 file; 121 nuovi in 6 file)
 
-I 43 test della dashboard richiedono `dash` installato (`pip install cto-audit[ui]`); gli altri 992 girano nel venv base.
+I 43 test della dashboard richiedono `dash` installato (`pip install cto-audit[ui]`); gli altri 1.010 girano nel venv base.
 
 | File | Test | Cosa copre |
 |---|---|---|
 | `test_git_history.py` | 13 | Collector su repo git reali in tmp_path; assenza di PII nel summary; parsing |
-| `test_team.py` | 18 | Ogni regola del TeamAnalyzer su GitSummary sintetici |
-| `test_provenance.py` | 45 | classify_license, LicenseChecker offline/online (MockTransport), ogni regola |
+| `test_team.py` | 19 | Ogni regola del TeamAnalyzer su GitSummary sintetici |
+| `test_provenance.py` | 54 | classify_license, LicenseChecker offline/online (MockTransport), ogni regola |
 | `test_due_diligence.py` | 23 | Profilo, engine a 4 e 6 layer, orchestrator end-to-end, report, CLI |
 | `test_gitignore_nested.py` | 4 | Regressione pattern annidati, ancorati, con path |
+| `test_llm_hitl.py` | 8 | Gate di approvazione sull'output LLM: approva, rifiuta, headless, --no-llm, etichette nel report |

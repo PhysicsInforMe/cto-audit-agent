@@ -87,14 +87,22 @@ class TeamAnalyzer:
         findings: list[Finding] = []
 
         if git.is_shallow:
+            # Con uno storico troncato solo la data dell'ultimo commit e affidabile:
+            # bus factor, storico compresso, tag e messaggi sarebbero artefatti del clone.
             findings.append(self._info(
                 "TEAM-GIT-INFO",
                 "Storico git troncato (clone shallow)",
-                f"Il clone contiene solo {git.total_commits} commit: le metriche di team e "
-                "continuita sono calcolate su uno storico parziale. Per una valutazione "
-                "affidabile usare un clone completo.",
+                f"Il clone contiene solo {git.total_commits} commit: bus factor, storico, tag e "
+                "qualita dei messaggi non sono valutabili. Viene verificata solo l'attivita "
+                "recente. Per una valutazione completa rieseguire con un clone completo "
+                "(in modalita due diligence le sorgenti remote vengono clonate per intero).",
                 confidence=0.4,
             ))
+            findings.extend(self._check_activity(git))
+            ai = self._ai_info(git)
+            if ai is not None:
+                findings.append(ai)
+            return findings
 
         if git.total_commits < MIN_COMMITS_FOR_HISTORY:
             findings.append(Finding(

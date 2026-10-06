@@ -8,12 +8,14 @@ README dichiara e quello che il repository contiene.
 
 Regole:
 - PROV-LICENSE-001:    nessuna dichiarazione di licenza o copyright nel repository
+- PROV-OWNLICENSE-INFO: classificazione della licenza del repository stesso (informativo)
 - PROV-COPYLEFT-001:   dipendenze con licenza copyleft forte (GPL, AGPL, SSPL)
 - PROV-COPYLEFT-002:   dipendenze con licenza copyleft debole (LGPL, MPL, EPL)
 - PROV-COMMERCIAL-001: dipendenze con licenza commerciale o non standard
 - PROV-LICENSE-INFO:   inventario licenze (informativo: quante note, quante ignote)
 - PROV-VENDORED-001:   codice di terze parti incorporato (vendor/, third_party/...)
-- PROV-COPYRIGHT-001:  header di copyright intestati a piu titolari diversi
+- PROV-COPYRIGHT-001:  header di copyright intestati a piu titolari diversi (progetto proprietario)
+- PROV-COPYRIGHT-002:  titolari multipli in progetto open source riconosciuto (atteso, basso)
 - PROV-CLAIMS-001:     dichiarazioni del README non riscontrate nel codice
 - PROV-CERT-INFO:      certificazioni dichiarate non verificabili dal codice (informativo)
 - PROV-SBOM-001:       nessun SBOM (CycloneDX / SPDX) nel repository
@@ -33,6 +35,7 @@ from cto_audit.collectors.license_checker import (
     DependencyLicense,
     LicenseCategory,
     LicenseChecker,
+    classify_license,
 )
 from cto_audit.core.models import (
     FileClassification,
@@ -64,7 +67,7 @@ COPYRIGHT_NOTICE_RE = re.compile(r"(copyright|\(c\)|©|all rights reserved|licen
 
 VENDORED_DIRS: set[str] = {
     "vendor", "vendors", "third_party", "third-party", "thirdparty",
-    "3rdparty", "3rd_party", "3rd-party", "external", "externals", "extern",
+    "3rdparty", "3rd_party", "3rd-party", "external", "externals", "extern", "deps",
 }
 SOURCE_EXTENSIONS: set[str] = {
     ".py", ".js", ".jsx", ".ts", ".tsx", ".java", ".go", ".rb", ".rs",
@@ -86,6 +89,12 @@ COPYRIGHT_HEADER_RE = re.compile(
 COPYRIGHT_HEADER_LINES = 40
 COPYRIGHT_MAX_FILES = 3000
 _COPYRIGHT_NOISE = {"all rights reserved", "the authors", "contributors", "its contributors", "the author"}
+# Prime parole che indicano una frase di licenza, non un titolare ("copyright notice", "copyright holders")
+_COPYRIGHT_STOPWORDS = {
+    "notice", "notices", "holder", "holders", "owner", "owners", "law", "laws", "in", "of", "and",
+    "or", "to", "by", "the", "this", "that", "is", "are", "statement", "information", "interest",
+    "license", "licence", "licensed", "year", "date", "header", "line", "lines",
+}
 
 # --- SBOM ---
 
@@ -96,9 +105,15 @@ SBOM_NAME_RE = re.compile(
 
 # --- Claims del README verificabili dal codice ---
 # (regex sul README, chiave evidenza)
+# Solo formulazioni che implicano che l'artefatto stia NEL repository: "docker run redis"
+# in un README e un'istruzione d'uso, non una dichiarazione di containerizzazione.
 README_CLAIMS: list[tuple[str, re.Pattern[str], str]] = [
-    ("Docker / container", re.compile(r"\b(docker|container(?:ized|ised)?|docker-compose)\b", re.I), "docker"),
-    ("Kubernetes", re.compile(r"\b(kubernetes|k8s|helm chart|helm)\b", re.I), "kubernetes"),
+    ("Docker / container", re.compile(
+        r"\b(dockerfile|docker-compose|docker compose up|docker build|"
+        r"docker images? (?:is|are) (?:provided|available|included)|containeri[sz]ed)\b", re.I), "docker"),
+    ("Kubernetes", re.compile(
+        r"\b(helm charts?|kubernetes manifests?|k8s manifests?|kubectl apply -f|"
+        r"deploy(?:ed|ment|s)? (?:on|to|in) kubernetes)\b", re.I), "kubernetes"),
     ("Infrastructure as Code", re.compile(r"\b(terraform|pulumi|cloudformation|ansible|bicep|infrastructure as code|iac)\b", re.I), "iac"),
     ("CI/CD", re.compile(r"\b(ci/cd|cicd|continuous integration|continuous delivery|continuous deployment|github actions|gitlab ci)\b", re.I), "ci"),
     ("Test automatizzati", re.compile(r"\b(unit tests?|test suite|test coverage|fully tested|\d{2,3}\s?% coverage|automated tests?)\b", re.I), "tests"),
@@ -148,6 +163,9 @@ class ProvenanceAnalyzer:
 
         findings: list[Finding] = []
         findings.extend(self._check_license_declaration(all_paths, readme))
+        own_license = self._check_own_license(all_paths, source)
+        findings.extend(own_license)
+        self._is_open_source = bool(own_license) and own_license[0].confidence >= 0.9
         findings.extend(self._check_dependency_licenses(all_paths, source))
         findings.extend(self._check_vendored(all_paths, dir_paths))
         findings.extend(self._check_copyright_holders(all_paths, source))
@@ -199,6 +217,48 @@ class ProvenanceAnalyzer:
             ),
             confidence=0.9,
         )]
+
+    # --- Check 1b: licenza del repository stesso (informativo) ---
+
+    def _check_own_license(self, all_paths: set[str], source: AuditSource) -> list[Finding]:
+        """Classifica la licenza dichiarata dal repository: per un acquirente e il primo dato sull'asset."""
+        for p in sorted(all_paths):
+            if "/" in p or p.lower() not in LICENSE_FILENAMES or p.lower().startswith("notice"):
+                continue
+            try:
+                head = source.read_file(p)[:1200]
+            except (ValueError, FileNotFoundError, PermissionError, UnicodeDecodeError):
+                continue
+            category = classify_license(head)
+            is_oss = category in (
+                LicenseCategory.PERMISSIVE, LicenseCategory.WEAK_COPYLEFT, LicenseCategory.STRONG_COPYLEFT,
+            )
+            first_line = next((ln.strip() for ln in head.splitlines() if ln.strip()), "")[:100]
+            labels = {
+                LicenseCategory.STRONG_COPYLEFT: "copyleft forte (GPL/AGPL/SSPL)",
+                LicenseCategory.WEAK_COPYLEFT: "copyleft debole (LGPL/MPL/EPL)",
+                LicenseCategory.PERMISSIVE: "permissiva (MIT/BSD/Apache)",
+                LicenseCategory.NONSTANDARD: "non standard o proprietaria",
+                LicenseCategory.UNKNOWN: "non riconosciuta",
+            }
+            return [Finding(
+                id=_make_id(), layer=Layer.PROVENANCE, severity=Severity.INFO,
+                rule_id="PROV-OWNLICENSE-INFO",
+                title=f"Licenza del repository: {labels[category]}",
+                description=(
+                    f"File {p}: \"{first_line}\". Classificazione: {labels[category]}. "
+                    + ("Il codice e distribuito con licenza copyleft forte: chi lo acquisisce eredita "
+                       "gli obblighi di rilascio del sorgente verso i propri utenti, salvo modello dual-licensing."
+                       if category == LicenseCategory.STRONG_COPYLEFT else
+                       "Licenza non riconducibile a uno standard SPDX: far leggere il testo al legale."
+                       if category in (LicenseCategory.NONSTANDARD, LicenseCategory.UNKNOWN) else
+                       "Nessun vincolo particolare per l'acquirente derivante dalla licenza del repository.")
+                ),
+                file_path=p,
+                # confidence 1.0 = licenza open source riconosciuta (usata dal check copyright)
+                confidence=1.0 if is_oss else 0.5,
+            )]
+        return []
 
     # --- Check 2: licenze delle dipendenze ---
 
@@ -333,11 +393,32 @@ class ProvenanceAnalyzer:
                 holder = re.sub(r"\s+", " ", m.group(1)).strip(" .,-")
                 if len(holder) < 3 or holder.lower() in _COPYRIGHT_NOISE:
                     continue
+                if holder.split()[0].lower() in _COPYRIGHT_STOPWORDS:
+                    continue
                 holders[holder] += 1
 
         if len(holders) < 2:
             return []
         listing = "\n".join(f"  - {h} ({n} file)" for h, n in holders.most_common(5))
+
+        if getattr(self, "_is_open_source", False):
+            # In un progetto open source i contributori mantengono il copyright: e la norma,
+            # non un segnale di codice copiato. Resta da verificare solo in caso di cessione.
+            return [Finding(
+                id=_make_id(), layer=Layer.PROVENANCE, severity=Severity.LOW,
+                rule_id="PROV-COPYRIGHT-002",
+                title=f"Progetto open source con {len(holders)} titolari di copyright",
+                description=(
+                    "I sorgenti contengono notice di copyright di piu intestatari:\n"
+                    + listing
+                    + "\nIl repository ha una licenza open source riconosciuta, quindi titolari multipli "
+                    "sono attesi (i contributori mantengono il copyright). Rileva solo se l'acquisizione "
+                    "prevede di cambiare licenza o chiudere il codice: in quel caso serve il consenso di "
+                    "ogni titolare o un CLA."
+                ),
+                confidence=0.7,
+            )]
+
         return [Finding(
             id=_make_id(), layer=Layer.PROVENANCE, severity=Severity.MEDIUM,
             rule_id="PROV-COPYRIGHT-001",
@@ -367,7 +448,7 @@ class ProvenanceAnalyzer:
         findings: list[Finding] = []
         if unmatched:
             findings.append(Finding(
-                id=_make_id(), layer=Layer.PROVENANCE, severity=Severity.MEDIUM,
+                id=_make_id(), layer=Layer.PROVENANCE, severity=Severity.LOW,
                 rule_id="PROV-CLAIMS-001",
                 title=f"Dichiarazioni del README non riscontrate nel codice ({len(unmatched)})",
                 description=(

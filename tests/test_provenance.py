@@ -138,6 +138,26 @@ class TestLicenseChecker:
 # PROV-LICENSE-001 — dichiarazione di licenza / copyright
 # ============================================================
 
+class TestOwnLicense:
+    def test_licenza_agpl_del_repo_segnalata(self, tmp_path):
+        _write(tmp_path, "LICENSE", "GNU AFFERO GENERAL PUBLIC LICENSE\nVersion 3, 19 November 2007\n")
+        _write(tmp_path, "app.py", "x = 1\n")
+        findings = _run(tmp_path)
+        f = next(f for f in findings if f.rule_id == "PROV-OWNLICENSE-INFO")
+        assert f.severity == Severity.INFO
+        assert "copyleft forte" in f.title
+
+    def test_licenza_mit_del_repo(self, tmp_path):
+        _write(tmp_path, "LICENSE", "MIT License\n\nCopyright (c) 2026 Acme\n")
+        _write(tmp_path, "app.py", "x = 1\n")
+        f = next(f for f in _run(tmp_path) if f.rule_id == "PROV-OWNLICENSE-INFO")
+        assert "permissiva" in f.title
+
+    def test_senza_license_nessuna_info(self, tmp_path):
+        _write(tmp_path, "app.py", "x = 1\n")
+        assert "PROV-OWNLICENSE-INFO" not in _info(_run(tmp_path))
+
+
 class TestLicenseDeclaration:
     def test_nessuna_licenza(self, tmp_path):
         _write(tmp_path, "app.py", "x = 1\n")
@@ -210,6 +230,16 @@ class TestVendoredAndCopyright:
         findings = _run(tmp_path, StackInfo(languages={"javascript": 1.0}))
         assert "PROV-VENDORED-001" in _rules(findings)
 
+    def test_deps_dir_in_progetto_c(self, tmp_path):
+        _write(tmp_path, "deps/lua/lua.c", "int main(){return 0;}\n")
+        _write(tmp_path, "src/server.c", "int x;\n")
+        assert "PROV-VENDORED-001" in _rules(_run(tmp_path, StackInfo(languages={"c": 1.0})))
+
+    def test_frasi_di_licenza_non_contano_come_titolari(self, tmp_path):
+        _write(tmp_path, "src/a.py", "# Copyright (c) 2026 Acme Srl\n# The above copyright notice shall be included\nx = 1\n")
+        _write(tmp_path, "src/b.py", "# Copyright holders and contributors\ny = 2\n")
+        assert "PROV-COPYRIGHT-001" not in _rules(_run(tmp_path))
+
     def test_vendor_dir_senza_sorgenti_non_scatta(self, tmp_path):
         _write(tmp_path, "vendor/fonts/readme.txt", "fonts\n")
         _write(tmp_path, "src/app.py", "x = 1\n")
@@ -224,6 +254,20 @@ class TestVendoredAndCopyright:
         f = next(f for f in findings if f.rule_id == "PROV-COPYRIGHT-001")
         assert "2 titolari" in f.title
 
+    def test_copyright_multipli_in_progetto_oss_e_basso(self, tmp_path):
+        _write(tmp_path, "LICENSE", "MIT License\n\nCopyright (c) 2026 Acme\n")
+        _write(tmp_path, "src/a.py", "# Copyright (c) 2021 Globex Corporation\nx = 1\n")
+        _write(tmp_path, "src/b.py", "# Copyright 2019 Initech Inc.\ny = 2\n")
+        findings = _run(tmp_path)
+        assert "PROV-COPYRIGHT-002" in _rules(findings)
+        assert "PROV-COPYRIGHT-001" not in _rules(findings)
+
+    def test_licenza_mit_senza_la_parola_mit(self, tmp_path):
+        _write(tmp_path, "LICENSE", "Copyright (c) 2013-2026 Ghost Foundation\n\nPermission is hereby granted, free of charge, to any person\n")
+        _write(tmp_path, "app.py", "x = 1\n")
+        f = next(f for f in _run(tmp_path) if f.rule_id == "PROV-OWNLICENSE-INFO")
+        assert "permissiva" in f.title
+
     def test_copyright_unico_titolare_non_scatta(self, tmp_path):
         _write(tmp_path, "src/a.py", "# Copyright (c) 2026 Acme Srl\nx = 1\n")
         _write(tmp_path, "src/b.py", "# Copyright (c) 2026 Acme Srl\ny = 2\n")
@@ -235,8 +279,19 @@ class TestVendoredAndCopyright:
 # ============================================================
 
 class TestReadmeClaims:
+    def test_istruzione_docker_run_non_e_un_claim(self, tmp_path):
+        _write(tmp_path, "README.md", "# App\n\nQuick start: docker run -p 6379:6379 redis\n")
+        _write(tmp_path, "app.py", "x = 1\n")
+        assert "PROV-CLAIMS-001" not in _rules(_run(tmp_path))
+
+    def test_claim_docker_e_a_severita_bassa(self, tmp_path):
+        _write(tmp_path, "README.md", "# App\n\nBuild with docker build . and deploy with the Helm chart.\n")
+        _write(tmp_path, "app.py", "x = 1\n")
+        f = next(f for f in _run(tmp_path) if f.rule_id == "PROV-CLAIMS-001")
+        assert f.severity == Severity.LOW
+
     def test_claim_docker_senza_dockerfile(self, tmp_path):
-        _write(tmp_path, "README.md", "# App\n\nRuns in Docker and deploys on Kubernetes with Terraform.\n")
+        _write(tmp_path, "README.md", "# App\n\nA Dockerfile is provided; the Helm chart deploys it. IaC with Terraform.\n")
         _write(tmp_path, "app.py", "x = 1\n")
         findings = _run(tmp_path)
         assert "PROV-CLAIMS-001" in _rules(findings)

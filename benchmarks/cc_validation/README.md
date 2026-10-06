@@ -13,53 +13,61 @@ Questo framework confronta i risultati di CTO Audit Agent con l'analisi di Claud
 ### Step 1: Esegui il tool sulla repo
 
 ```bash
-python validate.py scan /path/to/repo
+python validate.py scan /path/to/repo                  # profilo default (4 layer)
+python validate.py scan /path/to/repo --due-diligence  # profilo due-diligence (6 layer)
 ```
 
-Questo:
-- Esegue `cto-audit scan --auto-approve --offline -o result.json`
-- Stampa il prompt da usare con Claude Code
+Esegue `cto-audit scan --auto-approve --offline -o cto_result_<repo>.json` e stampa il prompt
+per l'LLM. Il prompt chiede, per ogni finding, una CATEGORY presa da un elenco chiuso (lo stesso
+usato per mappare i rule_id del tool) e una EVIDENCE: il file del repo che dimostra il finding.
+In modalita due diligence chiede anche tre risposte si/no sui deal flag (IP, team, secret).
 
-### Step 2: Esegui Claude Code
+### Step 2: Esegui l'LLM, piu volte
 
-1. Apri Claude Code nella stessa repo
-2. Incolla il prompt stampato dallo script
-3. Salva l'output JSON di CC in un file (es. `cc_result_reponame.json`)
+Apri Claude Code (o un altro LLM con accesso al repo), incolla il prompt in 2-3 sessioni
+separate e salva ogni output JSON (`llm_<repo>_1.json`, `llm_<repo>_2.json`, ...). Le
+esecuzioni multiple servono a misurare quanto l'LLM e stabile prima di usarlo come riferimento.
 
 ### Step 3: Confronta
 
 ```bash
-python validate.py compare cto_result_reponame.json cc_result_reponame.json
+python validate.py compare cto_result_<repo>.json llm_<repo>_1.json llm_<repo>_2.json --repo /path/to/repo
 ```
 
-Lo script produce:
-- **Score comparison**: distanza tra score tool e CC
-- **Layer comparison**: delta per ogni layer
-- **Finding comparison**: finding in comune, falsi positivi, falsi negativi
-- **Precision/Recall**: metriche di allineamento
+## Metriche
 
-## Interpretazione Risultati
+| Metrica | Cosa misura | Lettura |
+|---------|-------------|---------|
+| Score distance | Distanza tra score complessivo tool e media LLM | Sotto 15 punti: valutazione simile |
+| Layer delta | Stessa distanza, per ogni layer (inclusi provenance e team) | Isola il layer dove i due divergono |
+| Precision (categorie) | Quota di categorie trovate dal tool che anche l'LLM trova | Bassa: regole del tool da rivedere |
+| Recall (categorie) | Quota di categorie trovate dall'LLM che anche il tool trova | Bassa: coperture da aggiungere |
+| Precision / Recall per layer | Le stesse due metriche, layer per layer | Dice quale analyzer sbaglia |
+| Severity agreement | Sui finding comuni: quanti hanno la stessa severita, quanti entro un livello | Il tool pesa come un umano? |
+| Evidence rate | Quota di finding LLM che citano un file esistente nel repo (`--repo`) | Basso: l'LLM afferma cose che il repo non mostra |
+| Stabilita LLM | Range degli score e Jaccard medio delle categorie tra esecuzioni | Jaccard sotto 50%: l'LLM da solo non e una ground truth |
+| Deal flag agreement | Solo due diligence: accordo sulle tre risposte si/no (IP, team, secret) | Il livello che conta per un investitore |
 
-| Metrica | Target | Significato |
-|---------|--------|-------------|
-| Score Distance | < 15 punti | Tool e CC valutano in modo simile |
-| Precision | > 80% | Pochi falsi positivi |
-| Recall | > 70% | Pochi falsi negativi |
-| Finding Agreement | > 60% | Buon allineamento sui problemi |
+Il confronto avviene per **categoria**, non per rule_id: il tool mappa i suoi rule_id a
+categorie (`CATEGORY_MAP` in `validate.py`), l'LLM dichiara la categoria o viene
+classificato dalle parole chiave di titolo e descrizione. L'unione delle esecuzioni LLM e
+usata come riferimento: un finding conta se almeno una esecuzione lo trova.
 
-## Note
+## Interpretazione
 
-- Il confronto sui **rule_id** e approssimativo: CC usa ID diversi dal tool
-- Concentrarsi sulla **tipologia** di finding piuttosto che sull'ID esatto
-- Eseguire CC 2-3 volte per ridurre la variabilita dell'LLM
-- I risultati servono per migliorare le regole del tool, non come test pass/fail
+- Precision e recall vanno letti insieme all'evidence rate: un finding LLM senza file di
+  evidenza non e un falso negativo del tool finche non viene verificato a mano.
+- Il tool e deterministico: due esecuzioni danno lo stesso risultato. L'LLM no, e la
+  stabilita misurata e il limite superiore della sua affidabilita come riferimento.
+- I risultati servono a migliorare le regole del tool (soglie, parole chiave, coperture),
+  non come test pass/fail.
 
 ## Struttura File
 
 ```
 cc_validation/
 ├── README.md          # Questo file
-└── validate.py        # Script di validazione
+└── validate.py        # Script di validazione (scan, compare)
 ```
 
 ## Documenti Correlati

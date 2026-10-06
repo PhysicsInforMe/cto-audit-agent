@@ -73,14 +73,14 @@ CTO Audit Agent non e un linter ne uno scanner di vulnerabilita. E un **auditor 
 
 | Metrica | Valore |
 |---------|--------|
-| **Test automatizzati** | 1.035 test (57 file) |
+| **Test automatizzati** | 1.053 test (58 file) |
 | **Repository validate** | 29 (20 reali + 9 sintetiche) |
 | **Precision/Recall sintetico** | 100% / 100% su 9 scenari |
 | **Score medio su 20 repo reali** | 78.3/100 (range: 56-94) |
 | **Linguaggi supportati** | 13+ (Python, JS/TS, Java, Go, Rust, Ruby, PHP, C#, C/C++, Kotlin, Swift, Scala, Elixir) |
-| **Regole di analisi** | 36 nei 4 layer base (10 infra + 7 architettura + 9 security + 10 quality) + 15 nei layer di due diligence (8 provenance + 7 team) |
+| **Regole di analisi** | 36 nei 4 layer base (10 infra + 7 architettura + 9 security + 10 quality) + 16 nei layer di due diligence (9 provenance + 7 team) |
 | **Regole di scoring** | 43 (37 penalizzanti + 6 informative) |
-| **Knowledge Base remediation** | 37 entry base + 15 due diligence, con effort, rischio business, step per linguaggio |
+| **Knowledge Base remediation** | 37 entry base + 16 due diligence, con effort, rischio business, step per linguaggio |
 | **Profili di scoring** | 3 (default, vc-diligence, due-diligence a 6 layer) |
 | **Profili di compliance** | 2 (NIS2, GDPR) |
 | **Tempo di scansione** | 0.1s - 19s (dipende dalla dimensione repo) |

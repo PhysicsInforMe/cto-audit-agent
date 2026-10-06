@@ -114,7 +114,10 @@ _WEAK_RE = re.compile(
 )
 _PERMISSIVE_RE = re.compile(
     r"\b(mit|bsd|apache|isc|0bsd|unlicense|psf|python software foundation|zlib|"
-    r"cc0|wtfpl|artistic|boost|bsl-1\.0|public domain|blueoak)\b",
+    r"cc0|wtfpl|artistic|boost|bsl-1\.0|public domain|blueoak)\b"
+    # Firme testuali: il testo MIT e BSD spesso non contiene il nome della licenza
+    r"|permission is hereby granted, free of charge"
+    r"|redistribution and use in source and binary forms",
     re.IGNORECASE,
 )
 _NONSTANDARD_RE = re.compile(

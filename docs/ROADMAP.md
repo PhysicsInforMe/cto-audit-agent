@@ -91,7 +91,7 @@ Per mantenere massima distanza dal patent US Provisional (vedi [PATENT_ANALYSIS.
 
 | Componente | Dettaglio |
 |------------|-----------|
-| Layer Provenance (IP & licenze) | 8 regole + 2 info: licenza/copyright, dipendenze copyleft e commerciali, codice vendorizzato, copyright di terzi, claims del README, certificazioni dichiarate, SBOM |
+| Layer Provenance (IP & licenze) | 9 regole + 3 info: licenza del repository, licenza/copyright, dipendenze copyleft e commerciali, codice vendorizzato, copyright di terzi (distinguendo OSS), claims del README, certificazioni dichiarate, SBOM |
 | Layer Team (continuita) | 7 regole + 2 info: bus factor, inattivita, storico compresso, storico minimo, tag, messaggi di commit, commit co-firmati da AI |
 | GitHistoryCollector | Solo metadati git aggregati, nessun nome ne email nel risultato |
 | LicenseChecker | KB offline verificata sui registri + lookup PyPI/npm dietro consenso rete |

@@ -66,11 +66,18 @@ class TestUnavailable:
         assert _info_rules(findings) == {"TEAM-GIT-INFO"}
         assert "non e un repo" in findings[0].description
 
-    def test_shallow_aggiunge_info_ma_valuta(self, tmp_path):
-        findings = _run(_summary(is_shallow=True, authors_total=1, authors_365d=1,
-                                 top_author_share=1.0, top_author_share_365d=1.0), tmp_path)
+    def test_shallow_valuta_solo_attivita(self, tmp_path):
+        # Clone shallow: 1 commit, 1 autore, 0 tag sono artefatti del clone, non del progetto
+        findings = _run(_summary(is_shallow=True, total_commits=1, authors_total=1, authors_365d=1,
+                                 top_author_share=1.0, top_author_share_365d=1.0, tags_total=0,
+                                 last_commit=NOW - timedelta(days=2)), tmp_path)
         assert "TEAM-GIT-INFO" in _info_rules(findings)
-        assert "TEAM-BUSFACTOR-001" in _rules(findings)
+        assert _rules(findings) == set()
+
+    def test_shallow_segnala_comunque_inattivita(self, tmp_path):
+        findings = _run(_summary(is_shallow=True, total_commits=1, authors_total=1,
+                                 last_commit=NOW - timedelta(days=400)), tmp_path)
+        assert _rules(findings) == {"TEAM-ACTIVITY-001"}
 
 
 class TestHealthy:

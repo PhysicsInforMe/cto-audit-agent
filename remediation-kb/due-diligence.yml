@@ -114,6 +114,21 @@ PROV-COPYRIGHT-001:
     t_shirt: "M"
   priority_tier: 1
 
+PROV-COPYRIGHT-002:
+  risk_business: >
+    In un progetto open source i contributori mantengono il copyright sul
+    proprio codice: e la norma. Diventa un tema solo se l'operazione prevede
+    di cambiare licenza o rendere proprietario il codice, perche allora
+    serve il consenso di ogni titolare oppure un Contributor License Agreement.
+  remediation_steps:
+    - "Verificare se il piano post-acquisizione prevede un cambio di licenza o la chiusura del codice"
+    - "In caso affermativo, inventariare i titolari e valutare un CLA o la riscrittura delle parti non coperte"
+  effort_range:
+    min_hours: 1
+    max_hours: 4
+    t_shirt: "XS"
+  priority_tier: 3
+
 PROV-CLAIMS-001:
   risk_business: >
     Il README dichiara capacita (container, Kubernetes, IaC, CI/CD, test) di

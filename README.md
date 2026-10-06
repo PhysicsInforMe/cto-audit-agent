@@ -80,7 +80,7 @@ cto-audit project project.yml -o aggregated.json
 | **SecurityAnalyzer** | 9 | Segreti hardcoded, dipendenze vulnerabili, CVE check, autenticazione |
 | **QualityAnalyzer** | 10 | Test, linting, documentazione, complessita, pre-commit, editorconfig, contributing, changelog |
 
-Due analyzer aggiuntivi, **ProvenanceAnalyzer** (8 regole) e **TeamAnalyzer** (7 regole), si attivano con il profilo `due-diligence` o con `--focus provenance|team`: vedi [Modalita Due Diligence](#modalita-due-diligence-6-layer).
+Due analyzer aggiuntivi, **ProvenanceAnalyzer** (9 regole) e **TeamAnalyzer** (7 regole), si attivano con il profilo `due-diligence` o con `--focus provenance|team`: vedi [Modalita Due Diligence](#modalita-due-diligence-6-layer).
 
 ### Scoring basato sulla letteratura
 
@@ -154,10 +154,10 @@ cto-audit scan /path/to/codebase --focus team
 
 | Layer | Regole | Cosa verifica |
 |---|---|---|
-| **Provenienza & IP** (`provenance`) | 8 + 2 info | Dichiarazione di licenza/copyright, licenze delle dipendenze (copyleft forte GPL/AGPL/SSPL, copyleft debole, commerciali o non standard), codice di terze parti incorporato, header di copyright di piu titolari, dichiarazioni del README non riscontrate nel codice, certificazioni dichiarate, SBOM |
+| **Provenienza & IP** (`provenance`) | 9 + 3 info | Licenza del repository stesso, dichiarazione di licenza/copyright, licenze delle dipendenze (copyleft forte GPL/AGPL/SSPL, copyleft debole, commerciali o non standard), codice di terze parti incorporato, header di copyright di piu titolari (distinguendo progetti open source), dichiarazioni del README non riscontrate nel codice, certificazioni dichiarate, SBOM |
 | **Team & Continuita** (`team`) | 7 + 2 info | Bus factor (autore unico o >=80% dei commit), repository inattivo (90/180 giorni), storico compresso (>=60% delle righe in 3 commit), storico minimo, assenza di tag di release, messaggi di commit generici, quota di commit co-firmati da assistenti AI |
 
-Il layer Team legge lo storico git solo in forma aggregata: nel risultato e nel report non compaiono nomi ne email degli autori. Se la sorgente e un archivio ZIP o un clone shallow, il layer lo segnala e non penalizza.
+Il layer Team legge lo storico git solo in forma aggregata: nel risultato e nel report non compaiono nomi ne email degli autori. Se la sorgente e un archivio ZIP o un clone shallow, il layer lo segnala e valuta solo l'attivita recente. Quando il layer Team e attivo le sorgenti remote vengono clonate con lo storico completo.
 
 Il check licenze delle dipendenze funziona in due modi:
 
@@ -464,7 +464,7 @@ pip install -e ".[dev,ui]"
 pytest
 ```
 
-La suite di test comprende **1.035 test** distribuiti in 57 file, con 7 scenari end-to-end realistici e 3 scenari board report. I 43 test della dashboard richiedono l'extra `ui`.
+La suite di test comprende **1.053 test** distribuiti in 58 file, con 7 scenari end-to-end realistici e 3 scenari board report. I 43 test della dashboard richiedono l'extra `ui`.
 
 ## Documentazione
 

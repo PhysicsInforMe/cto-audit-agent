@@ -147,7 +147,7 @@ def _init_git_repo(path: Path, commits: int = 12) -> None:
 
 @pytest.fixture
 def startup_repo(tmp_path) -> Path:
-    _write(tmp_path, "README.md", "# Startup\n\nRuns in Docker. SOC 2 compliant.\n")
+    _write(tmp_path, "README.md", "# Startup\n\nA Dockerfile is provided for deployment. SOC 2 compliant.\n")
     _write(tmp_path, "requirements.txt", "fastapi==0.110.0\npymupdf==1.24.0\n")
     _write(tmp_path, "app/main.py", "from fastapi import FastAPI\napp = FastAPI()\n")
     _write(tmp_path, "tests/test_main.py", "def test_ok(): assert True\n")

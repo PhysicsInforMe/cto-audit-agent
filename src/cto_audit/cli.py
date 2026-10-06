@@ -158,6 +158,15 @@ def scan(
     else:
         resolved_type = source_type
 
+    # --- Storico git completo se il layer Team e attivo (bus factor, attivita) ---
+    needs_history = due_diligence or focus == "team"
+    if not needs_history:
+        try:
+            from cto_audit.scoring.profile import load_profile
+            needs_history = "team" in load_profile(scoring).layer_weights
+        except (FileNotFoundError, ValueError):
+            needs_history = False
+
     # --- Validazione percorso (solo per sorgenti locali) ---
     if resolved_type == "local":
         target_path = Path(target).resolve()
@@ -201,8 +210,9 @@ def scan(
     display_target = target
     console.print(Panel(
         f"  Target: [bold]{display_target}[/bold]\n"
-        f"  Sorgente: {resolved_type}\n"
-        f"  Scoring: {scoring}\n"
+        f"  Sorgente: {resolved_type}"
+        + ("  (clone completo per lo storico git)\n" if needs_history and resolved_type not in ("local", "archive", "zip") else "\n")
+        + f"  Scoring: {scoring}\n"
         f"  Compliance: {', '.join(compliance_profiles) if compliance_profiles else 'nessuna'}\n"
         f"  Offline: {'si' if offline else 'no'}\n"
         f"  Focus: {focus_layer.value if focus_layer else 'tutti i layer'}",
@@ -218,6 +228,7 @@ def scan(
             path_or_url=target,
             token=token,
             branch=ref,
+            shallow=not needs_history,
         )
     except (FileNotFoundError, NotADirectoryError, RuntimeError, ValueError) as e:
         console.print(f"[red bold]Errore:[/red bold] {e}")

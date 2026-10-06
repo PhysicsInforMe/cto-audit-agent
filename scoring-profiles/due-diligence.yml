@@ -355,6 +355,12 @@ rules:
     penalty: 0
     description: "Inventario licenze dipendenze (informativo)"
 
+  PROV-OWNLICENSE-INFO:
+    severity: info
+    weight: 0.0
+    penalty: 0
+    description: "Licenza del repository stesso (informativo)"
+
   PROV-VENDORED-001:
     severity: medium
     weight: 0.5
@@ -368,11 +374,19 @@ rules:
     penalty: -10
     description: "Header di copyright intestati a piu titolari diversi"
 
+  # Progetto open source riconosciuto: titolari multipli sono la norma.
+  PROV-COPYRIGHT-002:
+    severity: low
+    weight: 0.3
+    penalty: -2
+    description: "Titolari di copyright multipli in progetto open source (atteso)"
+
   # Documentazione aspirazionale: ogni claim non riscontrato va dimostrato.
+  # Severita bassa: e una domanda da fare al management, non un difetto accertato.
   PROV-CLAIMS-001:
-    severity: medium
+    severity: low
     weight: 0.5
-    penalty: -8
+    penalty: -3
     description: "Dichiarazioni del README non riscontrate nel codice"
 
   PROV-CERT-INFO:
